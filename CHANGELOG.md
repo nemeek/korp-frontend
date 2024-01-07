@@ -1,5 +1,20 @@
 # Changelog
 
+## [9.5.0-dev]
+
+### Added
+
+- A GitHub action to check the build
+
+### Changed
+
+- Logo changes: New Korp, new Språkbanken Text, replaced Swe-CLARIN with University of Gothenburg, new Karp icon
+- The search history selector has been moved down to the search tab bar
+
+### Fixed
+
+- Resolve folder name in corpus param
+
 ## [9.4.4] - 20231031
 
 ### Bug fixes
