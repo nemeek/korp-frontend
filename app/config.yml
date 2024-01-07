@@ -4,7 +4,7 @@ auth_module:
     default_value_remember: true
 
 
-autocomplete: true
+autocomplete: false
 map_enabled: false
 hits_per_page_values:
   - 25
@@ -24,8 +24,8 @@ languages:
   - value: swe
     label: Svenska
 
-group_statistics:
-  - lemma
+# group_statistics:
+#   - lemma
 
 
 statistics_search_default: false
