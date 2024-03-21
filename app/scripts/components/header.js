@@ -1,7 +1,10 @@
 /** @format */
-import korpLogo from "../../img/korplogo_block.svg"
-import sbxLogo from "../../img/sbx1r.svg"
-import sweClarinLogo from "../../img/sweclarin_logo.png"
+import _ from "lodash"
+import korpLogo from "../../img/korp_slogan.svg"
+import korpLogoEn from "../../img/korp_slogan_en.svg"
+import sbxLogo from "../../img/sprakbanken_text_slogan.svg"
+import sbxLogoEn from "../../img/sprakbanken_text_slogan_en.svg"
+import guLogo from "../../img/gu_logo_sv_head.svg"
 
 let html = String.raw
 export const headerComponent = {
@@ -98,13 +101,12 @@ export const headerComponent = {
                 </div>
                 <!-- TODO too many divs -->
             </div>
-            <div class="flex items-end ml-2 pb-1 mb-3 mt-3 px-3" id="header_left">
-                <a class="shrink-0 ml-4 relative" ng-click="$ctrl.logoClick()"
-                    ><img class="-mb-1" src="${korpLogo}" height="300" width="300" /><span
-                        class="version absolute bottom-0"
-                        >{{$ctrl.isLab ? 'v10' : 'v9'}}</span
-                    ></a
-                >
+
+            <div class="flex justify-between items-end gap-3 my-3 px-3" id="header_left">
+                <a class="shrink-0 relative ml-4 pl-0.5" ng-click="$ctrl.logoClick()">
+                    <img ng-if="$root.lang == 'swe'" src="${korpLogo}" height="300" width="300" />
+                    <img ng-if="$root.lang != 'swe'" src="${korpLogoEn}" height="300" width="300" />
+                </a>
                 <div id="labs_logo">
                     <svg
                         height="60"
@@ -125,15 +127,23 @@ export const headerComponent = {
                         ></path>
                     </svg>
                 </div>
-                <corpus-chooser></corpus-chooser
-                ><!-- spacer-->
-                <div class="grow"></div>
-                <span class="flex items-end mr-4 max-w-lg justify-end"
-                    ><a class="hidden lg_inline" href="https://spraakbanken.gu.se" target="_blank"
-                        ><img src="${sbxLogo}" style="margin-bottom: -6%;" /></a
-                    ><a class="hidden lg_inline grow-0" href="https://sweclarin.se" target="_blank"
-                        ><img src="${sweClarinLogo}" style="margin-bottom: 2px" /></a></span
-                ><select class="hidden md_block shrink min-w-0" id="search_history"></select>
+
+                <div class="grow min-[1150px]_hidden"></div>
+                <corpus-chooser></corpus-chooser>
+                <div class="grow hidden min-[1150px]_block"></div>
+
+                <a
+                    class="hidden min-[1150px]_flex h-20 shrink flex-col justify-end"
+                    href="https://spraakbanken.gu.se/"
+                    target="_blank"
+                >
+                    <img ng-if="$root.lang == 'swe'" src="${sbxLogo}" />
+                    <img ng-if="$root.lang != 'swe'" src="${sbxLogoEn}" />
+                </a>
+
+                <a class="hidden xl_block shrink-0 h-32 -mt-2" href="https://gu.se/" target="_blank">
+                    <img src="${guLogo}" class="h-full" />
+                </a>
             </div>
         </div>
     `,
@@ -202,16 +212,15 @@ export const headerComponent = {
             const N_VISIBLE = settings["visible_modes"]
 
             $ctrl.modes = _.filter(settings["modes"])
-            if (!isLab) {
+            if (process.env.ENVIRONMENT != "staging") {
                 $ctrl.modes = _.filter(settings["modes"], (item) => item.labOnly !== true)
             }
-            $ctrl.isLab = isLab
 
             $ctrl.visible = $ctrl.modes.slice(0, N_VISIBLE)
 
             $rootScope.$watch("lang", () => {
                 $ctrl.menu = util.collatorSort($ctrl.modes.slice(N_VISIBLE), "label", $rootScope.lang)
-            
+
                 const i = _.map($ctrl.menu, "mode").indexOf(currentMode)
                 if (i !== -1) {
                     $ctrl.visible.push($ctrl.menu[i])

@@ -1,10 +1,8 @@
 /** @format */
+import _ from "lodash"
 import { updateSearchHistory } from "@/history"
 import { fetchInitialData } from "@/data_init"
-import korpLogo from "../img/korplogo_block.svg"
-
-const deparam = require("jquery-deparam")
-
+import korpLogo from "../img/korp.svg"
 import jStorage from "../lib/jstorage"
 
 window.authenticationProxy = require("./components/auth/auth.js")
@@ -49,12 +47,11 @@ function initApp() {
         c.error("ERROR setting corpora from location", error1)
     }
 
-    if (isLab) {
+    if (process.env.ENVIRONMENT == "staging") {
         $("body").addClass("lab")
     }
 
     $("body").addClass(`mode-${window.currentMode}`)
-    util.browserWarn()
 
     $("#search_history").change(function (event) {
         const target = $(this).find(":selected")

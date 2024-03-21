@@ -19,7 +19,7 @@
     "lang_SV": "Swedish",
     "lang_SK": "Slovak",
     "lang_ET": "Estonian",
-    
+
     "menu": "Menu",
     "docs": "Manual (Swedish only)",
     "more": "More",
@@ -50,7 +50,9 @@
     "show_less": "Show fewer",
     "in_corpus": "in corpus",
     "cqp_query": "Custom CQP query",
-    "cqp_docs": "Get the CQP tutorial",
+    "cqp_docs": "Get the CQP",
+    "cqp_docs_guide": "guide (in Swedish)",
+    "cqp_docs_manual": "manual",
     "active_cqp_simple": "Active CQP query in simple search",
     "active_cqp_extended": "Active CQP query in extended",
     "max": "up to",
@@ -98,6 +100,9 @@
     "search_aborted": "The search was aborted",
 
     "show_map": "Show map",
+    "map_no_data": "Selected corpora have no geographical data.",
+    "map_relative": "Relative",
+    "map_relative_help": "Make map marker sizes relative to location prevalence in the corpus selection.",
     "map_name": "Place",
     "map_abs_occurrences": "Absolute occurrences",
     "map_rel_occurrences": "Relative occurrences",
@@ -344,6 +349,8 @@
     "add_filter_value": "Add",
 
     "repeat_error": "Error: Not possible to repeat from 0 for all tokens.",
+    "order_error": "Error: The \"in free order\" option requires multiple tokens, no repetition, no boundaries and no wildcards.",
+    "order_help": "The \"in free order\" option is compatible with queries that have multiple tokens, no repetition, no boundaries and no wildcards.",
 
     "choose_value": "Choose a value",
     "login_needed_for_corpora": "Login needed for access to",
@@ -354,13 +361,13 @@
     "go_to_start": "Go to start page",
 
     "stats_warn": "Statistics is disabled",
-    "stats_not_in_order_warn": "Statistics is currently not supported when \"in order\" is disabled.",
+    "stats_not_in_order_warn": "Statistics currently do not support the \"in free order\" search option.",
 
     "read_in_strix": "Read this text in Strix",
     "read_in_korp": "Read this text in Korp",
     "add_token": "Add token",
 
-    "in_order_chk": "in order",
+    "free_order_chk": "in free order",
     "prefix_chk": "initial part",
     "compound_middle": "medial part",
     "suffix_chk": "final part",

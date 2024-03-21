@@ -209,18 +209,6 @@ button, input, select {
   }
 }
 
-#header_left {
-  .version {
-    right: 92px;
-    line-height: 1;
-    font-size: 1.1rem;
-    color: lightslategray;
-  }
-  > a {
-    margin-right: 10px;
-  }
-}
-
 #search_history {
   max-width: 150px;
   > option:first-child {
@@ -910,7 +898,6 @@ a {
   color: #999;
   font-style: italic;
   position: relative;
-  text-align: center;
   .left, .match, .right {
     display : none;
   }
@@ -1170,14 +1157,14 @@ a {
 }
 
 #labs_logo {
-  display: none;
+  visibility: hidden;
   svg {
     top: 5px;
   }
 }
 
 .lab #labs_logo {
-  display: inline-block;
+  visibility: visible;
 }
 
 #korplink {
@@ -2298,10 +2285,6 @@ li.active a span .num-to-find {
         padding-top: 2px;
         padding-left: 2px;
     }
-    .btn-container {
-        padding: 10px;
-        text-align: right;
-    }
     .map-settings-title {
         margin: 0;
         padding: 8px 14px;
@@ -2347,7 +2330,7 @@ li.active a span .num-to-find {
 }
 
 .input-error {
-    border:red 2px solid;
+    outline:red 2px solid;
 }
 
 // TODO we should not do this, update boostrap instead?

@@ -1,4 +1,5 @@
 /** @format */
+import _ from "lodash"
 import { setDefaultConfigValues } from "./settings"
 import * as treeUtil from "./components/corpus_chooser/util"
 
@@ -99,12 +100,19 @@ async function getTimeData() {
 }
 
 async function getConfig() {
+    // Load static corpus config if it exists.
+    try {
+        const corpusConfig = require(`modes/${window.currentMode}_corpus_config.json`)
+        console.log(`Using static corpus config`)
+        return corpusConfig
+    } catch {}
+
     let configUrl
     // The corpora to include can be defined elsewhere can in a mode
     if (settings["corpus_config_url"]) {
         configUrl = await settings["corpus_config_url"]()
     } else {
-        const labParam = window.isLab ? "&include_lab" : ""
+        const labParam = process.env.ENVIRONMENT == "staging" ? "&include_lab" : ""
         configUrl = `${settings["korp_backend_url"]}/corpus_config?mode=${window.currentMode}${labParam}`
     }
     let response

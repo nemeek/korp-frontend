@@ -1,4 +1,5 @@
 /** @format */
+import _ from "lodash"
 import * as trendUtil from "../trend_diagram/trend_util"
 
 const granularities = {
@@ -109,8 +110,7 @@ export const trendDiagramComponent = {
                     return
                 }
 
-                const nTokens = $ctrl.data.cqp.split("]").length - 2
-                const timecqp = trendUtil.getTimeCQP(time, zoom, nTokens, validZoomLevels.indexOf(zoom) < 3)
+                const timecqp = trendUtil.getTimeCQP(time, zoom, validZoomLevels.indexOf(zoom) < 3)
                 const decodedCQP = decodeURIComponent(cqp)
                 const opts = {
                     ajaxParams: {

@@ -1,4 +1,6 @@
 /** @format */
+import _ from "lodash"
+
 let html = String.raw
 export const searchtabsComponent = {
     template: html`
@@ -23,6 +25,9 @@ export const searchtabsComponent = {
                     </uib-tab-heading>
                     <compare-search></compare-search>
                 </uib-tab>
+                <div class="flex justify-end items-center">
+                    <select class="hidden md_block shrink min-w-0 m-1" id="search_history"></select>
+                </div>
             </uib-tabset>
             <div
                 class="flex items-baseline bg-blue-100 border border-blue-200 shadow-inner"
@@ -61,7 +66,6 @@ export const searchtabsComponent = {
                         ng-model="$ctrl.showStatistics"
                         ng-change="$ctrl.showStatisticsChange()"
                         class="mr-1"
-                        ng-disabled="!$ctrl.inOrder"
                     /><label for="show_stats">{{'show_stats' | loc:$root.lang}}</label>
                 </div>
                 <div ng-show="$ctrl.settings['word_picture'] !== false">
@@ -102,12 +106,6 @@ export const searchtabsComponent = {
             $rootScope.$watch(
                 () => $location.search().search_tab,
                 (val) => ($ctrl.isCompareSelected = val === 3)
-            )
-
-            $ctrl.inOrder = true
-            $rootScope.$watch(
-                () => $location.search().in_order,
-                (val) => ($ctrl.inOrder = val == undefined)
             )
 
             $ctrl.savedSearches = compareSearches.savedSearches
