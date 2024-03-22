@@ -139,11 +139,13 @@ korpApp.config([
 korpApp.run([
     "$rootScope",
     "$location",
+    "$locale",
     "tmhDynamicLocale",
+    "tmhDynamicLocaleCache",
     "$q",
     "$timeout",
     "$uibModal",
-    function ($rootScope, $location, tmhDynamicLocale, $q, $timeout, $uibModal) {
+    function ($rootScope, $location, $locale, tmhDynamicLocale, tmhDynamicLocaleCache, $q, $timeout, $uibModal) {
         const s = $rootScope
         s._settings = settings
         window.lang = s.lang = $location.search().lang || settings["default_language"]
@@ -161,11 +163,29 @@ korpApp.run([
 
         s.searchtabs = () => $(".search_tabs > ul").scope().tabset.tabs
 
-        s._loc = $location
-
-        s.$watch("_loc.search()", function () {
-            _.defer(() => (window.onHashChange || _.noop)())
+        // Listen to url changes like #?lang=swe
+        s.$on("$locationChangeSuccess", () => {
+            // Update current locale. This is async and triggers the "$localeChangeSuccess" event.
             tmhDynamicLocale.set($location.search().lang || settings["default_language"])
+        })
+
+        // Listen to change of current language
+        s.$on("$localeChangeSuccess", () => {
+            // The fresh info in $locale only has the 2-letter code, not the 3-letter code that we use
+            // Find the configured 3-letter UI language matching the new 2-letter locale
+            const lang = settings["languages"]
+                .map((language) => language.value)
+                .find((lang3) => tmhDynamicLocaleCache.get(lang3).id == $locale.id)
+
+            // Update global variables
+            s.lang = lang
+            window.lang = lang
+
+            // Trigger jQuery Localize
+            $("body").localize()
+
+            // Update language switcher
+            $("#languages").radioList("select", lang)
         })
 
         $(document).keyup(function (event) {
