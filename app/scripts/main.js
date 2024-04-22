@@ -1,11 +1,13 @@
 /** @format */
 import _ from "lodash"
+import jStorage from "../lib/jstorage"
+import settings from "@/settings"
 import { updateSearchHistory } from "@/history"
 import { fetchInitialData } from "@/data_init"
+import currentMode from "@/mode"
+import * as authenticationProxy from "@/components/auth/auth"
 import korpLogo from "../img/korp.svg"
-import jStorage from "../lib/jstorage"
-
-window.authenticationProxy = require("./components/auth/auth.js")
+import { angularLocationSearch } from "./util"
 
 const createSplashScreen = () => {
     const splash = document.getElementById("preload")
@@ -51,7 +53,7 @@ function initApp() {
         $("body").addClass("lab")
     }
 
-    $("body").addClass(`mode-${window.currentMode}`)
+    $("body").addClass(`mode-${currentMode}`)
 
     $("#search_history").change(function (event) {
         const target = $(this).find(":selected")
@@ -66,9 +68,7 @@ function initApp() {
     $("#languages").radioList({
         change() {
             const currentLang = $(this).radioList("getSelected").data("mode")
-            locationSearch({
-                lang: currentLang !== settings["default_language"] ? currentLang : null,
-            })
+            angularLocationSearch("lang", currentLang !== settings["default_language"] ? currentLang : null)
         },
         // TODO: this does nothing?
         selected: settings["default_language"],

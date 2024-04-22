@@ -1,17 +1,21 @@
 /** @format */
+import angular from "angular"
 import _ from "lodash"
-import statemachine from "../statemachine"
+import statemachine from "@/statemachine"
+import settings from "@/settings"
+import currentMode from "@/mode"
+import { SelectionManager, html, setDownloadLinks } from "@/util"
+import "@/components/kwic-pager"
+import "@/components/kwic-word"
 
-let html = String.raw
-
-export const kwicComponent = {
+angular.module("korpApp").component("kwic", {
     template: html`
         <div ng-click="$ctrl.onKwicClick($event)">
             <div class="result_controls">
                 <warning ng-if="$ctrl.aborted && !$ctrl.loading">{{'search_aborted' | loc:$root.lang}}</warning>
-                <div class="controls_n" ng-show="$ctrl.hitsDisplay">
+                <div class="controls_n" ng-if="$ctrl.hitsInProgress != null">
                     <span>{{'num_results' | loc:$root.lang}}: </span>
-                    <span class="num-result" ng-bind-html="$ctrl.hitsDisplay | trust"></span>
+                    <span class="num-result">{{ $ctrl.hitsInProgress | prettyNumber:$root.lang }}</span>
                 </div>
                 <div class="hits_picture" ng-if="$ctrl.hitsPictureData.length > 1">
                     <table class="hits_picture_table">
@@ -123,12 +127,12 @@ export const kwicComponent = {
                 page-change="$ctrl.pageEvent(page)"
                 hits-per-page="$ctrl.hitsPerPage"
             ></kwic-pager>
-            <div id="download-links-container">
+            <div ng-if="!$ctrl.loading">
                 <select id="download-links" ng-if="$ctrl._settings['enable_backend_kwic_download']"></select>
                 <select
                     id="frontendDownloadLinks"
                     ng-if="$ctrl._settings['enable_frontend_kwic_download']"
-                    ng-change="$ctrl.download.init($ctrl.download.selected, $ctrl.hitsDisplay)"
+                    ng-change="$ctrl.download.init($ctrl.download.selected, $ctrl.hits)"
                     ng-model="$ctrl.download.selected"
                     ng-options="item.value as item.label | loc:$root.lang disable when item.disabled for item in $ctrl.download.options"
                 ></select>
@@ -147,7 +151,7 @@ export const kwicComponent = {
         aborted: "<",
         loading: "<",
         active: "<",
-        hitsDisplay: "<",
+        hitsInProgress: "<",
         hits: "<",
         isReading: "<",
         page: "<",
@@ -157,6 +161,7 @@ export const kwicComponent = {
         prevParams: "<",
         prevRequest: "<",
         corpusOrder: "<",
+        /** Current page of results. */
         kwicInput: "<",
         corpusHits: "<",
     },
@@ -168,7 +173,7 @@ export const kwicComponent = {
         function ($location, $element, $timeout, kwicDownload) {
             let $ctrl = this
 
-            const selectionManager = new util.SelectionManager()
+            const selectionManager = new SelectionManager()
 
             $ctrl.$onInit = () => {
                 addKeydownHandler()
@@ -177,7 +182,7 @@ export const kwicComponent = {
             $ctrl.$onChanges = (changeObj) => {
                 if ("kwicInput" in changeObj && $ctrl.kwicInput != undefined) {
                     $ctrl.kwic = massageData($ctrl.kwicInput)
-                    $ctrl.useContext = $ctrl.isReading || locationSearch()["in_order"] != null
+                    $ctrl.useContext = $ctrl.isReading || $location.search()["in_order"] != null
                     if (!$ctrl.isReading) {
                         $timeout(() => {
                             centerScrollbar()
@@ -185,9 +190,8 @@ export const kwicComponent = {
                         })
                     }
 
-                    if (settings["enable_backend_kwic_download"] && $ctrl.hitsDisplay) {
-                        // using hitsDisplay here, since hits is not set until request is complete
-                        util.setDownloadLinks($ctrl.prevRequest, {
+                    if (settings["enable_backend_kwic_download"]) {
+                        setDownloadLinks($ctrl.prevRequest, {
                             kwic: $ctrl.kwic,
                             corpus_order: $ctrl.corpusOrder,
                         })
@@ -250,8 +254,6 @@ export const kwicComponent = {
 
             $ctrl._settings = settings
 
-            const isParallelMode = window.currentModeParallel
-
             $ctrl.toggleReading = () => {
                 $ctrl.readingMode = !$ctrl.readingMode
                 $ctrl.contextChangeEvent()
@@ -264,11 +266,11 @@ export const kwicComponent = {
                     { value: "", label: "download_kwic" },
                     { value: "kwic/csv", label: "download_kwic_csv" },
                     { value: "kwic/tsv", label: "download_kwic_tsv" },
-                    { value: "annotations/csv", label: "download_annotations_csv", disabled: isParallelMode },
-                    { value: "annotations/tsv", label: "download_annotations_tsv", disabled: isParallelMode },
+                    { value: "annotations/csv", label: "download_annotations_csv", disabled: settings["parallel"] },
+                    { value: "annotations/tsv", label: "download_annotations_tsv", disabled: settings["parallel"] },
                 ],
                 selected: "",
-                init: (value, hitsDisplay) => {
+                init: (value, hits) => {
                     if ($ctrl.download.blobName) {
                         URL.revokeObjectURL($ctrl.download.blobName)
                     }
@@ -279,7 +281,7 @@ export const kwicComponent = {
                         ...value.split("/"),
                         $ctrl.kwic,
                         $ctrl.prevParams,
-                        hitsDisplay
+                        hits
                     )
                     $ctrl.download.fileName = fileName
                     $ctrl.download.blobName = blobName
@@ -553,7 +555,8 @@ export const kwicComponent = {
                     _.each(links, function (val, key) {
                         var lang = key.split("-")[1]
                         _.each(_.compact(val.split("|")), function (num) {
-                            var link = findRef(num, sentence.aligned[mainCorpus + "-" + lang])
+                            const link = findRef(num, sentence.aligned[mainCorpus + "-" + lang])
+                            if (!link) return
                             link._link_selected = true
                             $ctrl.parallelSelected.push(link)
                         })
@@ -793,4 +796,4 @@ export const kwicComponent = {
             }
         },
     ],
-}
+})

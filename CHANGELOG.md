@@ -2,20 +2,67 @@
 
 ## [Unreleased]
 
+### Added
+
+- Frontpage with description, corpus updates and example search queries [#341](https://github.com/spraakbanken/korp-frontend/issues/341)
+- Configurable generated link in corpus info [#355](https://github.com/spraakbanken/korp-frontend/issues/355)
+
 ### Changed
 
-- Extended support for description on frontpage, with corpus updates [#341](https://github.com/spraakbanken/korp-frontend/issues/341)
 - The "medial part" option now includes first/last parts also for lemgram search [#347](https://github.com/spraakbanken/korp-frontend/issues/347)
+- Improved UI reactivity for Simple search
+- Removed globals – import them instead (or their members):
+  - `settings`
+  - `currentMode`
+  - `currentModeParallel`
+  - `CQP`
+  - `model`
+  - `CorpusListing`
+  - `ParallelCorpusListing`
+  - `statisticsService`
+  - `regescape`
+  - `unregescape`
+  - `safeApply`
+- Renamed localization functions (just like the template filters):
+  - `getLocaleString` to `loc`
+  - `getLocaleStringObject` to `locObj`
+  - `translateAttribute` to `locAttribute`
+- Renamed lemgram/saldo functions:
+  - `lemgramToString` to `lemgramToHtml`
+  - `lemgramToPlainString` to `lemgramToString`
+  - `isLemgramId` to `isLemgram`
+  - `saldoToString` to `saldoToHtml`
+  - `saldoToPlaceholderString` to `saldoToString`
+- Removed `window.util` and converted its members to exported functions:
+  - `loc`, `locObj`, `locAttribute`
+  - lemgram/saldo functions
+  - `setDownloadLinks`
+  - `httpConfAddMethod`, `httpConfAddMethodAngular`, `httpConfAddMethodFetch`
+  - `collatorSort`
+- In `locAttribute`, moved the optional `lang` parameter last
+- Revised number formatting:
+  - Removed `formatDecimalString` and `prettyNumbers`
+  - Added `formatRelativeHits` to format a number with exactly one decimal
+    - All occurrences of relative hit counts now use this
+  - Added `hitCountHtml` to consistently format a relative+absolute tuple
+- Revised the `locationSearch` and `searchHash` util functions:
+  - Deprecated global `locationSearch` in favor of using `$location` directly
+  - Removed global `searchHash` in favor of using `$location` directly
+  - Added `angularLocationSearch` to expose `$location.search` to code outside Angular
+- Switched to parsing news from YAML file [#348](https://github.com/spraakbanken/korp-frontend/issues/348)
+- Removed map layer "Stamen Watercolor" [#339](https://github.com/spraakbanken/korp-frontend/issues/339)
+- Removed dependency `jquery.format`
 
 ### Fixed
 
+- Correct order of numbers in trend diagram table (first relative, then absolute)
+- Update number formatting in statistics table when switching language
 - Disable Trend diagram and Map buttons while waiting for statistics search to finish [#346](https://github.com/spraakbanken/korp-frontend/issues/346)
+- Error when clicking trend diagram with multiple series [#358](https://github.com/spraakbanken/korp-frontend/issues/358)
+- Strip HTML from total hits in annotated KWIC dowload
 - Fix dynamic translation for tabs etc
+- Modes in "More" menu sorted locale-awarely
 - Allow dash in attribute name
-
-### Removed
-
-- Map layer "Stamen Watercolor" [#339](https://github.com/spraakbanken/korp-frontend/issues/339)
 
 ## [9.5.3] - 2024-03-11
 

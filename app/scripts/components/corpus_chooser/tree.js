@@ -1,10 +1,11 @@
 /** @format */
+import angular from "angular"
 import * as treeUtil from "./util"
-
+import settings from "@/settings"
 var collapsedImg = require("../../../img/collapsed.png")
-let html = String.raw
+import { collatorSort, html } from "@/util"
 
-export const ccTreeComponent = {
+angular.module("korpApp").component("ccTree", {
     template: html`
         <div ng-class="{ 'cc-level-indent' : $ctrl.indent }">
             <div
@@ -80,7 +81,7 @@ export const ccTreeComponent = {
 
             $ctrl.$onInit = () => {
                 function sort(nodes) {
-                    return util.collatorSort(nodes, "title", $rootScope.lang)
+                    return collatorSort(nodes, "title", $rootScope.lang)
                 }
                 $ctrl.sortedCorpora = sort($ctrl.node.corpora)
                 $ctrl.sortedFolders = sort($ctrl.node.subFolders)
@@ -145,4 +146,4 @@ export const ccTreeComponent = {
             }
         },
     ],
-}
+})

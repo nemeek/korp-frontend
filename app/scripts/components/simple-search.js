@@ -1,9 +1,13 @@
 /** @format */
+import angular from "angular"
 import _ from "lodash"
 import statemachine from "@/statemachine"
+import settings from "@/settings"
+import { expandOperators, mergeCqpExprs, parse, stringify, supportsInOrder } from "@/cqp_parser/cqp"
+import { html, regescape, saldoToHtml, unregescape } from "@/util"
+import "@/components/autoc"
 
-let html = String.raw
-export const simpleSearchComponent = {
+angular.module("korpApp").component("simpleSearch", {
     template: html`
         <div id="korp-simple">
             <global-filters lang="lang"></global-filters>
@@ -75,11 +79,12 @@ export const simpleSearchComponent = {
         "$location",
         "backend",
         "$rootScope",
+        "$scope",
         "searches",
         "compareSearches",
         "$uibModal",
         "$timeout",
-        function ($location, backend, $rootScope, searches, compareSearches, $uibModal, $timeout) {
+        function ($location, backend, $rootScope, $scope, searches, compareSearches, $uibModal, $timeout) {
             const ctrl = this
 
             ctrl.disableLemgramAutocomplete = !settings.autocomplete
@@ -91,17 +96,16 @@ export const simpleSearchComponent = {
             })
 
             /** Whether tokens should be matched in arbitrary order. */
-            ctrl.freeOrder = $location.search().in_order != null
+            ctrl.freeOrder = false
             /** Whether the "free order" option is applicable. */
             ctrl.freeOrderEnabled = false
-            ctrl.prefix = $location.search().prefix != null
-            ctrl.mid_comp = $location.search().mid_comp != null
-            ctrl.suffix = $location.search().suffix != null
-            if (settings.input_case_insensitive_default) {
-                ctrl.isCaseInsensitive = true
+            ctrl.prefix = false
+            ctrl.mid_comp = false
+            ctrl.suffix = false
+            ctrl.isCaseInsensitive = false
+
+            if (settings["input_case_insensitive_default"]) {
                 $location.search("isCaseInsensitive", "")
-            } else {
-                ctrl.isCaseInsensitive = $location.search().isCaseInsensitive != null
             }
 
             // triggers watch on searches.activeSearch
@@ -111,15 +115,18 @@ export const simpleSearchComponent = {
                 $location.search("mid_comp", ctrl.mid_comp ? true : null)
                 $location.search("suffix", ctrl.suffix ? true : null)
                 $location.search("isCaseInsensitive", ctrl.isCaseInsensitive ? true : null)
-
                 $location.search("within", null)
-                locationSearch("search", null)
+
+                // Unset and set query in next time step in order to trigger changes correctly in `searches`.
+                $location.search("search", null)
+                $location.replace()
                 $timeout(function () {
                     if (ctrl.currentText) {
-                        util.searchHash("word", ctrl.currentText)
+                        $location.search("search", `word|${ctrl.currentText}`)
                     } else if (ctrl.lemgram) {
-                        util.searchHash("lemgram", ctrl.lemgram)
+                        $location.search("search", `lemgram|${ctrl.lemgram}`)
                     }
+                    $location.search("page", null)
                 }, 0)
             }
 
@@ -172,7 +179,7 @@ export const simpleSearchComponent = {
                 }
 
                 if ($rootScope.globalFilter) {
-                    val = CQP.stringify(CQP.mergeCqpExprs(CQP.parse(val || "[]"), $rootScope.globalFilter))
+                    val = stringify(mergeCqpExprs(parse(val || "[]"), $rootScope.globalFilter))
                 }
 
                 return val
@@ -182,7 +189,7 @@ export const simpleSearchComponent = {
                 compareSearches.saveSearch(name, ctrl.getCQP())
             }
 
-            ctrl.stringifyRelated = (wd) => util.saldoToString(wd)
+            ctrl.stringifyRelated = (wd) => saldoToHtml(wd)
 
             ctrl.relatedDefault = 3
 
@@ -242,11 +249,23 @@ export const simpleSearchComponent = {
                         ctrl.isRawInput = false
                         ctrl.lemgram = search.val
                     }
-                    $rootScope.simpleCQP = CQP.expandOperators(ctrl.getCQP())
+                    $rootScope.simpleCQP = expandOperators(ctrl.getCQP())
                     ctrl.updateFreeOrderEnabled()
                     ctrl.doSearch()
                 }
             })
+
+            // Reach to changes in URL params
+            $scope.$watch(
+                () => $location.search(),
+                (search) => {
+                    ctrl.freeOrder = search.in_order != null
+                    ctrl.prefix = search.prefix != null
+                    ctrl.mid_comp = search.mid_comp != null
+                    ctrl.suffix = search.suffix != null
+                    ctrl.isCaseInsensitive = search.isCaseInsensitive != null
+                }
+            )
 
             ctrl.onChange = (output, isRawOutput) => {
                 if (isRawOutput) {
@@ -261,8 +280,8 @@ export const simpleSearchComponent = {
             }
 
             ctrl.updateFreeOrderEnabled = () => {
-                const cqpObjs = CQP.parse(ctrl.getCQP() || "[]")
-                ctrl.freeOrderEnabled = CQP.supportsInOrder(cqpObjs)
+                const cqpObjs = parse(ctrl.getCQP() || "[]")
+                ctrl.freeOrderEnabled = supportsInOrder(cqpObjs)
             }
 
             ctrl.doSearch = function () {
@@ -297,4 +316,4 @@ export const simpleSearchComponent = {
             }
         },
     ],
-}
+})

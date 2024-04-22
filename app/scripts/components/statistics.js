@@ -1,10 +1,13 @@
 /** @format */
+import angular from "angular"
 import _ from "lodash"
 import "components-jqueryui/ui/widgets/dialog.js"
-import statisticsFormatting from "../../config/statistics_config.js"
+import settings from "@/settings"
+import { formatRelativeHits, html, loc, locObj } from "@/util"
+import { getCqp } from "../../config/statistics_config.js"
+import { expandOperators } from "@/cqp_parser/cqp.js"
 
-let html = String.raw
-export const statisticsComponent = {
+angular.module("korpApp").component("statistics", {
     template: html`
         <div ng-click="$ctrl.onStatsClick($event)" ng-show="!$ctrl.error">
             <div ng-if="!$ctrl.inOrder && !$ctrl.hasResult">{{'stats_not_in_order_warn' | loc:$root.lang}}</div>
@@ -315,23 +318,14 @@ export const statisticsComponent = {
                         linkElem = linkElem.find(".statistics-link")
                     }
                     const rowIx = parseInt(linkElem.data("row"))
-                    // TODO don't loop
-                    let rowData
-                    for (let row of $ctrl.data) {
-                        if (row.rowId === rowIx) {
-                            rowData = row
-                            break
-                        }
-                    }
+                    const rowData = $ctrl.data.find((row) => row.rowId === rowIx)
                     let cqp2 = null
                     // isPhraseLevelDisjunction: used for constructing cqp like: ([] | [])
                     if (rowData.isPhraseLevelDisjunction) {
-                        let tokens = rowData.statsValues.map((vals) =>
-                            statisticsFormatting.getCqp(vals, $ctrl.searchParams.ignoreCase)
-                        )
+                        let tokens = rowData.statsValues.map((vals) => getCqp(vals, $ctrl.searchParams.ignoreCase))
                         cqp2 = tokens.join(" | ")
                     } else {
-                        cqp2 = statisticsFormatting.getCqp(rowData.statsValues, $ctrl.searchParams.ignoreCase)
+                        cqp2 = getCqp(rowData.statsValues, $ctrl.searchParams.ignoreCase)
                     }
 
                     const opts = {}
@@ -362,7 +356,7 @@ export const statisticsComponent = {
                     }
 
                     var row = getDataAt(rowIx)
-                    cqp = statisticsFormatting.getCqp(row.statsValues, $ctrl.searchParams.ignoreCase)
+                    cqp = getCqp(row.statsValues, $ctrl.searchParams.ignoreCase)
                     subExprs.push(cqp)
                     const parts = $ctrl.searchParams.reduceVals.map((reduceVal) => row.formattedValue[reduceVal])
                     labelMapping[cqp] = parts.join(", ")
@@ -387,7 +381,7 @@ export const statisticsComponent = {
                 $ctrl.noRowsError = false
 
                 // TODO this is wrong, it should use the previous search
-                const cqpExpr = CQP.expandOperators(searches.getCqpExpr())
+                const cqpExpr = expandOperators(searches.getCqpExpr())
 
                 const cqpExprs = {}
                 for (let rowIx of selectedRows) {
@@ -395,7 +389,7 @@ export const statisticsComponent = {
                         continue
                     }
                     var row = getDataAt(rowIx)
-                    const cqp = statisticsFormatting.getCqp(row.statsValues, $ctrl.searchParams.ignoreCase)
+                    const cqp = getCqp(row.statsValues, $ctrl.searchParams.ignoreCase)
                     const parts = $ctrl.searchParams.reduceVals.map((reduceVal) => row.formattedValue[reduceVal])
                     cqpExprs[cqp] = parts.join(", ")
                 }
@@ -461,12 +455,11 @@ export const statisticsComponent = {
                         if (row.rowId === rowId) {
                             for (let corpus of $ctrl.searchParams.corpora) {
                                 const freq = row[corpus + "_value"][valueType]
+                                const freqStr = formatRelativeHits(freq.toString(), $rootScope.lang)
+                                const title = locObj(settings.corpora[corpus.toLowerCase()]["title"])
                                 dataItems.push({
                                     value: freq,
-                                    caption:
-                                        util.getLocaleStringObject(settings.corpora[corpus.toLowerCase()]["title"]) +
-                                        ": " +
-                                        util.formatDecimalString(freq.toString()),
+                                    caption: `${title}: ${freqStr}`,
                                     shape_id: rowId,
                                 })
                             }
@@ -478,17 +471,24 @@ export const statisticsComponent = {
 
                 $("#dialog").remove()
 
-                const relHitsString = util.getLocaleString("statstable_relfigures_hits")
+                const relHitsString = loc("statstable_relfigures_hits")
                 $("<div id='dialog'></div>")
                     .appendTo("body")
                     .append(
-                        `<div id="pieDiv"><div id="statistics_switch" class="text-center my-2">
-                        <a href="javascript:" rel="localize[statstable_relfigures]" data-mode="relative">Relativa frekvenser</a>
-                        <a href="javascript:" rel="localize[statstable_absfigures]" data-mode="absolute">Absoluta frekvenser</a>
-                    </div>
-                    <div id="chartFrame" class="h-[340px] mx-auto" />
-                    <p id="hitsDescription" class="text-center my-2" rel="localize[statstable_absfigures_hits]">${relHitsString}</p>
-                    </div>`
+                        html`<div id="pieDiv">
+                            <div id="statistics_switch" class="text-center my-2">
+                                <a href="javascript:" rel="localize[statstable_relfigures]" data-mode="relative">
+                                    Relativa frekvenser
+                                </a>
+                                <a href="javascript:" rel="localize[statstable_absfigures]" data-mode="absolute">
+                                    Absoluta frekvenser
+                                </a>
+                            </div>
+                            <div id="chartFrame" class="h-[340px] mx-auto" />
+                            <p id="hitsDescription" class="text-center my-2" rel="localize[statstable_absfigures_hits]">
+                                ${relHitsString}
+                            </p>
+                        </div>`
                     )
                     .dialog({
                         width: 400,
@@ -589,8 +589,8 @@ export const statisticsComponent = {
                     header.push(reduceVal)
                 }
 
-                header.push(util.getLocaleString("stats_total"))
-                header = header.concat(_.map(cl.corpora, (corpus) => util.getLocaleStringObject(corpus["title"])))
+                header.push(loc("stats_total"))
+                header = header.concat(_.map(cl.corpora, (corpus) => locObj(corpus["title"])))
 
                 const fmt = (what) => what.toString()
 
@@ -647,4 +647,4 @@ export const statisticsComponent = {
             }
         },
     ],
-}
+})

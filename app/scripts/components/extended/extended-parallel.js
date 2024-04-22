@@ -1,8 +1,12 @@
 /** @format */
+import angular from "angular"
 import _ from "lodash"
+import settings from "@/settings"
+import { expandOperators } from "@/cqp_parser/cqp"
+import { html } from "@/util"
+import "@/components/extended/tokens"
 
-let html = String.raw
-export const extendedParallelComponent = {
+angular.module("korpApp").component("extendedParallel", {
     template: html`
         <div ng-keydown="$ctrl.keydown($event)">
             <div ng-repeat="l in $ctrl.langs">
@@ -74,8 +78,8 @@ export const extendedParallelComponent = {
             if ($location.search().parallel_corpora) {
                 ctrl.langs = _.map($location.search().parallel_corpora.split(","), function (lang) {
                     var obj = { lang: lang, cqp: "[]" }
-                    if (locationSearch()["cqp_" + lang]) {
-                        obj.cqp = locationSearch()["cqp_" + lang]
+                    if ($location.search()["cqp_" + lang]) {
+                        obj.cqp = $location.search()["cqp_" + lang]
                     }
                     return obj
                 })
@@ -108,7 +112,7 @@ export const extendedParallelComponent = {
                 }
                 function expandCQP(cqp) {
                     try {
-                        return CQP.expandOperators(cqp)
+                        return expandOperators(cqp)
                     } catch (e) {
                         c.log("parallel cqp parsing error", e)
                         return cqp
@@ -127,7 +131,7 @@ export const extendedParallelComponent = {
 
                 _.each(ctrl.langs, function (langobj, i) {
                     if (!_.isEmpty(langobj.lang)) {
-                        locationSearch("cqp_" + langobj.lang, langobj.cqp)
+                        $location.search("cqp_" + langobj.lang, langobj.cqp)
                     }
                 })
                 $rootScope.extendedCQP = output
@@ -147,9 +151,12 @@ export const extendedParallelComponent = {
             }
 
             ctrl.onSubmit = function () {
+                // Unset and set query in next time step in order to trigger changes correctly in `searches`.
                 $location.search("search", null)
+                $location.replace()
                 $timeout(function () {
-                    util.searchHash("cqp", onCQPChange())
+                    $location.search("search", `cqp|${onCQPChange()}`)
+                    $location.search("page", null)
                 }, 0)
             }
 
@@ -198,9 +205,9 @@ export const extendedParallelComponent = {
             }
             ctrl.removeLangRow = function (i) {
                 const lang = ctrl.langs.pop()
-                locationSearch("cqp_" + lang.lang, null)
+                $location.search("cqp_" + lang.lang, null)
                 ctrl.onLangChange()
             }
         },
     ],
-}
+})

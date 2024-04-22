@@ -1,8 +1,14 @@
 /** @format */
 "use strict"
 import _ from "lodash"
+import settings from "@/settings"
+import * as authenticationProxy from "@/components/auth/auth"
+import { angularLocationSearch, httpConfAddMethod } from "@/util"
+import { statisticsService } from "@/statistics"
+import { expandOperators } from "@/cqp_parser/cqp"
 
-window.model = {}
+const model = {}
+export default model
 
 model.normalizeStatsData = function (data) {
     if (!_.isArray(data.combined)) {
@@ -29,7 +35,7 @@ class BaseProxy {
 
     expandCQP(cqp) {
         try {
-            return CQP.expandOperators(cqp)
+            return expandOperators(cqp)
         } catch (e) {
             c.warn("CQP expansion failed", cqp, e)
             return cqp
@@ -202,7 +208,7 @@ model.KWICProxy = class KWICProxy extends BaseProxy {
         }
 
         function getPageInterval(page) {
-            const hpp = locationSearch().hpp
+            const hpp = angularLocationSearch().hpp
             const itemsPerPage = Number(hpp) || settings["hits_per_page_default"]
             page = Number(page)
             const output = {}
@@ -241,7 +247,7 @@ model.KWICProxy = class KWICProxy extends BaseProxy {
         data.show = _.uniq(["sentence"].concat(data.show)).join(",")
         data.show_struct = _.uniq(data.show_struct).join(",")
 
-        if (locationSearch()["in_order"] != null) {
+        if (angularLocationSearch()["in_order"] != null) {
             data.in_order = false
         }
 
@@ -250,7 +256,7 @@ model.KWICProxy = class KWICProxy extends BaseProxy {
         const command = data.command || "query"
         delete data.command
         const def = $.ajax(
-            util.httpConfAddMethod({
+            httpConfAddMethod({
                 url: settings["korp_backend_url"] + "/" + command,
                 data,
                 beforeSend(req, settings) {
@@ -288,7 +294,7 @@ model.LemgramProxy = class LemgramProxy extends BaseProxy {
         }
         this.prevParams = params
         const def = $.ajax(
-            util.httpConfAddMethod({
+            httpConfAddMethod({
                 url: settings["korp_backend_url"] + "/relations",
                 data: params,
 
@@ -355,10 +361,10 @@ model.StatsProxy = class StatsProxy extends BaseProxy {
     makeRequest(cqp, callback) {
         const self = this
         super.makeRequest()
-        const reduceval = locationSearch().stats_reduce || "word"
+        const reduceval = angularLocationSearch().stats_reduce || "word"
         const reduceVals = reduceval.split(",")
 
-        const ignoreCase = locationSearch().stats_reduce_insensitive != null
+        const ignoreCase = angularLocationSearch().stats_reduce_insensitive != null
 
         const reduceValLabels = _.map(reduceVals, function (reduceVal) {
             if (reduceVal === "word") {
@@ -398,7 +404,7 @@ model.StatsProxy = class StatsProxy extends BaseProxy {
         const def = $.Deferred()
         this.pendingRequests.push(
             $.ajax(
-                util.httpConfAddMethod({
+                httpConfAddMethod({
                     url: settings["korp_backend_url"] + "/count",
                     data,
                     beforeSend(req, settings) {
@@ -453,7 +459,7 @@ model.TimeProxy = class TimeProxy extends BaseProxy {
         const dfd = $.Deferred()
 
         const xhr = $.ajax(
-            util.httpConfAddMethod({
+            httpConfAddMethod({
                 url: settings["korp_backend_url"] + "/timespan",
                 data: {
                     granularity: "y",
@@ -570,7 +576,7 @@ model.GraphProxy = class GraphProxy extends BaseProxy {
         const def = $.Deferred()
 
         $.ajax(
-            util.httpConfAddMethod({
+            httpConfAddMethod({
                 url: settings["korp_backend_url"] + "/count_time",
                 dataType: "json",
                 data: params,

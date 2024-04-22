@@ -1,33 +1,24 @@
 /** @format */
 import _ from "lodash"
-import { CorpusListing } from "./corpus_listing"
+import settings from "@/settings"
 
-window.util = {}
+/** Use html`<div>html here</div>` to enable formatting template strings with Prettier. */
+export const html = String.raw
 
-window.CorpusListing = CorpusListing
-
-// TODO never use this, remove when sure it is not used
-window.search = (obj, val) => window.locationSearch(obj, val)
-
-window.locationSearch = function (obj, val) {
-    const s = angular.element("body").scope()
-
-    const ret = safeApply(s.$root, function () {
-        if (!obj) {
-            return s.$root.locationSearch()
-        }
-        if (_.isObject(obj)) {
-            obj = _.extend({}, s.$root.locationSearch(), obj)
-            return s.$root.locationSearch(obj)
-        } else {
-            return s.$root.locationSearch(obj, val)
-        }
+/**
+ * Get/set values from the URL search string via Angular.
+ * Only use this in code outside Angular. Inside, use `$location.search()`.
+ * Note that this is sensitive to the number of arguments; omitting an argument is different from passing undefined.
+ */
+export function angularLocationSearch(...args) {
+    const $root = angular.element("body")
+    return safeApply($root.scope(), function () {
+        const $location = $root.injector().get("$location")
+        return $location.search(...args)
     })
-
-    return ret
 }
 
-window.safeApply = function (scope, fn) {
+export function safeApply(scope, fn) {
     if (scope.$$phase || scope.$root.$$phase) {
         return fn(scope)
     } else {
@@ -35,151 +26,219 @@ window.safeApply = function (scope, fn) {
     }
 }
 
-util.SelectionManager = function () {
-    this.selected = $()
-    this.aux = $()
-}
-
-util.SelectionManager.prototype.select = function (word, aux) {
-    if (word == null || !word.length) {
-        return
+export class SelectionManager {
+    constructor() {
+        this.selected = $()
+        this.aux = $()
     }
-    if (this.selected.length) {
-        this.selected.removeClass("word_selected token_selected")
-        this.aux.removeClass("word_selected aux_selected")
-    }
-    this.selected = word
-    this.aux = aux || $()
-    this.aux.addClass("word_selected aux_selected")
-    word.addClass("word_selected token_selected")
-}
 
-util.SelectionManager.prototype.deselect = function () {
-    if (!this.selected.length) {
-        return
-    }
-    this.selected.removeClass("word_selected token_selected")
-    this.selected = $()
-    this.aux.removeClass("word_selected aux_selected")
-    this.aux = $()
-}
-
-util.SelectionManager.prototype.hasSelected = function () {
-    return this.selected.length > 0
-}
-
-util.getLocaleString = (key, lang) => util.getLocaleStringUndefined(key, lang) || key
-
-util.getLocaleStringObject = (translationObject, lang) => {
-    if (!lang) {
-        lang = window.lang || settings["default_language"]
-    }
-    if (translationObject) {
-        if (typeof translationObject == "string") {
-            return translationObject
-        } else if (translationObject[lang]) {
-            return translationObject[lang]
-        } else if (translationObject[settings["default_language"]]) {
-            return translationObject[settings["default_language"]]
-        } else {
-            // fall back to the first value if neither the selected or default langauge are available
-            return translationObject.values()[0]
+    select(word, aux) {
+        if (word == null || !word.length) {
+            return
         }
+        if (this.selected.length) {
+            this.selected.removeClass("word_selected token_selected")
+            this.aux.removeClass("word_selected aux_selected")
+        }
+        this.selected = word
+        this.aux = aux || $()
+        this.aux.addClass("word_selected aux_selected")
+        word.addClass("word_selected token_selected")
     }
-    return undefined
+
+    deselect() {
+        if (!this.selected.length) {
+            return
+        }
+        this.selected.removeClass("word_selected token_selected")
+        this.selected = $()
+        this.aux.removeClass("word_selected aux_selected")
+        this.aux = $()
+    }
+
+    hasSelected() {
+        return this.selected.length > 0
+    }
 }
 
-util.getLocaleStringUndefined = function (key, lang) {
-    if (!lang) {
-        lang = window.lang || settings["default_language"]
-    }
+/**
+ * Get translated string from global localization data.
+ * @param {string} key A translation key.
+ * @param {string} [lang] The code of the language to translate to. Defaults to the global current language.
+ * @returns {string} The translated string, or the value of `key` if no translation is found.
+ */
+export function loc(key, lang) {
+    lang = lang || window.lang || settings["default_language"]
     try {
         return window.loc_data[lang][key]
     } catch (e) {
-        return undefined
+        return key
     }
 }
 
-util.lemgramToString = function (lemgram, appendIndex) {
+/**
+ * Get translated string from a given object.
+ * @param {object | string} map An object of strings keyed by language codes. Alternatively, just a string.
+ * @param {string} [lang] The code of the language to translate to. Defaults to the global current language.
+ * @returns {string | undefined} The translated string, or undefined if no translation is found.
+ */
+export function locObj(map, lang) {
+    if (!map) return undefined
+    if (typeof map == "string") return map
+
+    lang = lang || window.lang || settings["default_language"]
+    if (map[lang]) {
+        return map[lang]
+    } else if (map[settings["default_language"]]) {
+        return map[settings["default_language"]]
+    }
+
+    // fall back to the first value if neither the selected or default language are available
+    return Object.values(map)[0]
+}
+
+/**
+ * Translate a given key in a translations list.
+ * Very similar to `locObj(translations[key], lang)` but handles edge cases differently.
+ * TODO Can we merge this with locObj?
+ * @param {object} translations A two-dimensional map keyed first by translation keys and secondly by language codes, with translated strings as values.
+ *   Alternatively, a one-dimensional map keyed only by translation keys, with non-translated strings as values.
+ * @param {string} key A translation key.
+ * @param {string} [lang] The code of the language to translate to. Defaults to the global current language.
+ * @returns {string} The translated string, undefined if no translation is found, or the value of `key` if `translations` is unusable.
+ */
+export function locAttribute(translations, key, lang) {
+    lang = lang || window.lang || settings["default_language"]
+    if (translations && translations[key])
+        return _.isObject(translations[key]) ? translations[key][lang] : translations[key]
+    return key
+}
+
+/**
+ * Format a number of "relative hits" (hits per 1 million tokens), using exactly one decimal.
+ * @param {number|string} x Number of relative hits
+ * @param {string} lang The locale to use.
+ * @returns A string with the number nicely formatted.
+ */
+export function formatRelativeHits(x, lang) {
+    return Number(x).toLocaleString(lang, { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+}
+
+/**
+ * Format as `<relative> (<absolute>)` plus surrounding HTML.
+ * @param {number} absolute Number of absolute hits
+ * @param {number} relative Number of relative hits (hits per 1 million tokens)
+ * @param {string} lang The locale to use.
+ * @returns A HTML snippet.
+ */
+export function hitCountHtml(absolute, relative, lang) {
+    const relativeHtml = `<span class='relStat'>${formatRelativeHits(relative, lang)}</span>`
+    // TODO Remove outer span?
+    // TODO Flexbox?
+    const absoluteHtml = `<span class='absStat'>(${absolute.toLocaleString(lang)})</span>`
+    return `<span>${relativeHtml} ${absoluteHtml}</span>`
+}
+
+/**
+ * Render a lemgram string as pretty HTML.
+ * TODO No HTML in placeholder in Extended!
+ * @param {string} lemgram A lemgram string, e.g. "vara..nn.2"
+ * @param {boolean} [appendIndex] Whether the numerical index should be included in output.
+ * @returns {string} An HTML string.
+ */
+export function lemgramToHtml(lemgram, appendIndex) {
     lemgram = _.trim(lemgram)
-    let infixIndex = ""
-    let concept = lemgram
-    infixIndex = ""
-    let type = ""
-    if (util.isLemgramId(lemgram)) {
-        const match = util.splitLemgram(lemgram)
-        if (appendIndex != null && match.index !== "1") {
-            infixIndex = $.format("<sup>%s</sup>", match.index)
-        }
-        concept = match.form.replace(/_/g, " ")
-        type = match.pos.slice(0, 2)
-    }
-    return $.format("%s%s <span class='wordclass_suffix'>(<span rel='localize[%s]'>%s</span>)</span>", [
-        concept,
-        infixIndex,
-        type,
-        util.getLocaleString(type),
-    ])
-}
-
-const numberToSuperscript = {
-    1: "",
-    2: "²",
-    3: "³",
-    4: "⁴",
-    5: "⁵",
-    6: "⁶",
-    7: "⁷",
-    8: "⁸",
-    9: "⁹",
-    0: "⁰",
-}
-
-// use this function to get a pretty printed lemgram with no HTML
-util.lemgramToPlainString = function (lemgram) {
-    const { form, pos, index } = util.splitLemgram(_.trim(lemgram))
-    const infixIndex = _.map(index, (indexPart) => numberToSuperscript[indexPart]).join("")
+    if (!isLemgram(lemgram)) return lemgram
+    const { form, pos, index } = splitLemgram(lemgram)
+    const indexHtml = appendIndex != null && index !== "1" ? `<sup>${index}</sup>` : ""
     const concept = form.replace(/_/g, " ")
     const type = pos.slice(0, 2)
-    return `${concept}${infixIndex} (${util.getLocaleString(type)})`
+    return `${concept}${indexHtml} (<span rel="localize[${type}]">${loc(type)}</span>)`
 }
 
-util.saldoRegExp = /(.*?)\.\.(\d\d?)(:\d+)?$/
-util.saldoToString = function (saldoId, appendIndex) {
-    const match = saldoId.match(util.saldoRegExp)
-    let infixIndex = ""
-    if (appendIndex != null && match[2] !== "1") {
-        infixIndex = $.format("<sup>%s</sup>", match[2])
-    }
-    return $.format("%s%s", [match[1].replace(/_/g, " "), infixIndex])
+/**
+ * Render a lemgram string in pretty plain text.
+ * @param {string} lemgram A lemgram string, e.g. "vara..n.2"
+ * @returns {string} A plain-text string.
+ */
+export function lemgramToString(lemgram) {
+    const { form, pos, index } = splitLemgram(_.trim(lemgram))
+    const indexSup = parseInt(index) > 1 ? numberToSuperscript(index) : ""
+    const concept = form.replace(/_/g, " ")
+    const type = pos.slice(0, 2)
+    return `${concept}${indexSup} (${loc(type)})`
 }
 
-util.saldoToPlaceholderString = function (saldoId, appendIndex) {
-    const match = saldoId.match(util.saldoRegExp)
-    let infixIndex = ""
-    if (appendIndex != null && match[2] !== "1") {
-        infixIndex = $.format(" (%s)", match[2])
+const lemgramRegexp = /\.\.\w+\.\d\d?(:\d+)?$/
+
+/**
+ * Determines if a string is a lemgram string, e.g. "vara..n.2"
+ * @param {string} str A string to test.
+ * @returns {boolean}
+ */
+export const isLemgram = (str) => str.search(lemgramRegexp) !== -1
+
+/**
+ * Analyze a lemgram string into its constituents.
+ * @param {string} lemgram A lemgram string, e.g. "vara..n.2"
+ * @returns {object} A map with the keys `morph`, `form`, `pos`, `index` and `startIndex`. Values are strings.
+ * @throws If input is not a lemgram. You can test it first with `isLemgram`!
+ */
+export function splitLemgram(lemgram) {
+    if (!isLemgram(lemgram)) {
+        throw new Error(`Input to splitLemgram is not a lemgram: ${lemgram}`)
     }
-    return $.format("%s%s", [match[1].replace(/_/g, " "), infixIndex])
+    const match = lemgram.match(/((\w+)--)?(.*?)\.\.(\w+)\.(\d+)(:\d+)?$/)
+    return {
+        morph: match[2],
+        form: match[3],
+        pos: match[4],
+        index: match[5],
+        startIndex: match[6],
+    }
 }
 
-util.lemgramRegexp = /\.\.\w+\.\d\d?(:\d+)?$/
-util.isLemgramId = (lemgram) => lemgram.search(util.lemgramRegexp) !== -1
+const saldoRegexp = /(.*?)\.\.(\d\d?)(:\d+)?$/
 
-util.splitLemgram = function (lemgram) {
-    if (!util.isLemgramId(lemgram)) {
-        throw new Error(`Input to util.splitLemgram is not a lemgram: ${lemgram}`)
-    }
-    const keys = ["morph", "form", "pos", "index", "startIndex"]
-    const splitArray = lemgram.match(/((\w+)--)?(.*?)\.\.(\w+)\.(\d\d?)(:\d+)?$/).slice(2)
-    return _.zipObject(keys, splitArray)
+/**
+ * Render a SALDO string as pretty HTML.
+ * @param {string} saldoId A SALDO string, e.g. "vara..2"
+ * @param {boolean} [appendIndex] Whether the numerical index should be included in output.
+ * @returns {string} An HTML string.
+ */
+export function saldoToHtml(saldoId, appendIndex) {
+    const match = saldoId.match(saldoRegexp)
+    const concept = match[1].replace(/_/g, " ")
+    const indexHtml = appendIndex != null && match[2] !== "1" ? `<sup>${match[2]}</sup>` : ""
+    return `${concept}${indexHtml}`
+}
+
+/**
+ * Render a SALDO string in pretty plain text.
+ * @param {string} saldoId A SALDO string, e.g. "vara..2"
+ * @returns {string} An plain-text string.
+ */
+export function saldoToString(saldoId) {
+    const match = saldoId.match(saldoRegexp)
+    const concept = match[1].replace(/_/g, " ")
+    const indexSup = parseInt(match[2]) > 1 ? numberToSuperscript(match[2]) : ""
+    return `${concept}${indexSup}`
+}
+
+/**
+ * Represent a number with superscript characters like "⁴²".
+ * @param {number | string} n A decimal number.
+ * @returns A string of superscript numbers.
+ */
+function numberToSuperscript(number) {
+    return [...String(number)].map((n) => "⁰¹²³⁴⁵⁶⁷⁸⁹"[n]).join("")
 }
 
 // Add download links for other formats, defined in
 // settings["download_formats"] (Jyrki Niemi <jyrki.niemi@helsinki.fi>
 // 2014-02-26/04-30)
 
-util.setDownloadLinks = function (xhr_settings, result_data) {
+export function setDownloadLinks(xhr_settings, result_data) {
     // If some of the required parameters are null, return without
     // adding the download links.
     if (
@@ -229,14 +288,14 @@ util.setDownloadLinks = function (xhr_settings, result_data) {
         // NOTE: Using attribute rel="localize[...]" to localize the
         // title attribute requires a small change to
         // lib/jquery.localize.js. Without that, we could use
-        // util.getLocaleString, but it would not change the
+        // `loc`, but it would not change the
         // localizations immediately when switching languages but only
         // after reloading the page.
-        // # title = util.getLocaleString('formatdescr_' + format)
+        // # title = loc('formatdescr_' + format)
         const option = $(`\
 <option
     value="${format}"
-    title="${util.getLocaleString(`formatdescr_${format}`)}"
+    title="${loc(`formatdescr_${format}`)}"
     class="download_link">${format.toUpperCase()}</option>\
 `)
 
@@ -275,92 +334,24 @@ util.setDownloadLinks = function (xhr_settings, result_data) {
         })
 }
 
-util.searchHash = function (type, value) {
-    locationSearch({
-        search: type + "|" + value,
-        page: 0,
-    })
-}
+/** Escape special characters in a string so it can be safely inserted in a regular expression. */
+export const regescape = (s) => s.replace(/[.|?|+|*||'|()^$\\]/g, "\\$&").replace(/"/g, '""')
 
-// Helper function to turn "8455999" into "8 455 999"
-util.prettyNumbers = function (numstring) {
-    const regex = /(\d+)(\d{3})/
-    let outStrNum = numstring.toString()
-    while (regex.test(outStrNum)) {
-        outStrNum = outStrNum.replace(
-            regex,
-            `$1<span rel="localize[util_numbergroupseparator]">${util.getLocaleString(
-                "util_numbergroupseparator"
-            )}</span>$2`
-        )
-    }
+/** Unescape special characters in a regular expression – remove single backslashes and replace double with single. */
+export const unregescape = (s) => s.replace(/\\\\|\\/g, (match) => (match === "\\\\" ? "\\" : ""))
 
-    return outStrNum
-}
+/** Return the length of baseUrl with params added. */
+const calcUrlLength = (baseUrl, params) => baseUrl.length + new URLSearchParams(params).toString().length + 1
 
-window.regescape = (s) => s.replace(/[.|?|+|*||'|()^$\\]/g, "\\$&").replace(/"/g, '""')
-
-window.unregescape = (s) =>
-    // remove single backslashes and replace double backslashes with one backslash
-    s.replace(/\\\\|\\/g, (match) => {
-        if (match === "\\\\") {
-            return "\\"
-        } else {
-            return ""
-        }
-    })
-
-util.formatDecimalString = function (x, mode, statsmode, stringOnly) {
-    if (_.includes(x, ".")) {
-        const parts = x.split(".")
-        const decimalSeparator = util.getLocaleString("util_decimalseparator")
-        if (stringOnly) {
-            return parts[0] + decimalSeparator + parts[1]
-        }
-        if (mode) {
-            return (
-                util.prettyNumbers(parts[0]) +
-                '<span rel="localize[util_decimalseparator]">' +
-                decimalSeparator +
-                "</span>" +
-                parts[1]
-            )
-        } else {
-            return util.prettyNumbers(parts[0]) + decimalSeparator + parts[1]
-        }
-    } else {
-        if (statsmode) {
-            return x
-        } else {
-            return util.prettyNumbers(x)
-        }
-    }
-}
-
-util.translateAttribute = (lang, translations, value) => {
-    if (!lang) {
-        lang = window.lang || settings["default_language"]
-    }
-
-    if (translations && translations[value]) {
-        return _.isObject(translations[value]) ? translations[value][lang] : translations[value]
-    } else {
-        return value
-    }
-}
-
-// Return the length of baseUrl with params added
-const calcUrlLength = function (baseUrl, params) {
-    return baseUrl.length + new URLSearchParams(params).toString().length + 1
-}
-
-// Add HTTP method to the HTTP configuration object conf for
-// jQuery.ajax or AngularJS $http call: if the result URL would be
-// longer than settings.backendURLMaxLength, use POST, otherwise GET.
-// For a $http configuration, the request parameters should be in
-// property "params" of conf (moved to "data" for POST), and for a
-// jQuery.ajax configuration, they should be in "data".
-util.httpConfAddMethod = function (conf) {
+/**
+ * Add HTTP method to the HTTP configuration object conf for jQuery.ajax or AngularJS $http call:
+ * if the result URL would be longer than settings.backendURLMaxLength, use POST, otherwise GET.
+ * @param {object} conf A $http or jQuery.ajax configuration object.
+ *   For $http, the request parameters should be in `params` (moved to `data` for POST),
+ *   and for jQuery.ajax, they should be in `data`.
+ * @returns The same object, possibly modified in-place
+ */
+export function httpConfAddMethod(conf) {
     // The property to use for GET: AngularJS $http uses params for
     // GET and data for POST, whereas jQuery.ajax uses data for both
     const getDataProp = conf.params != undefined ? "params" : "data"
@@ -376,10 +367,13 @@ util.httpConfAddMethod = function (conf) {
     return conf
 }
 
-// For POST with the Angular $http service, handling data must be done a
-// bit differenly to assure that the data is sent and "Form Data" and not JSON
-util.httpConfAddMethodAngular = function (conf) {
-    const fixedConf = util.httpConfAddMethod(conf)
+/**
+ * Like `httpConfAddMethod`, but for use with $http, to ensure data is sent as form data and not JSON.
+ * @param {object} conf A $http or jQuery.ajax configuration object.
+ * @returns The same object, possibly modified in-place
+ */
+export function httpConfAddMethodAngular(conf) {
+    const fixedConf = httpConfAddMethod(conf)
 
     if (fixedConf.method == "POST") {
         const formDataParams = new FormData()
@@ -398,8 +392,12 @@ util.httpConfAddMethodAngular = function (conf) {
     return fixedConf
 }
 
-// again, for the native fetch method, we must configure the object differently from jQuery.ajax / angular $http
-util.httpConfAddMethodFetch = function (conf) {
+/**
+ * Like `httpConfAddMethod`, but for use with native `fetch()`.
+ * @param {object} conf A $http or jQuery.ajax configuration object.
+ * @returns The same object, possibly modified in-place
+ */
+export function httpConfAddMethodFetch(conf) {
     const params = conf.params
     delete conf.params
     if (calcUrlLength(conf.url, params)) {
@@ -416,9 +414,14 @@ util.httpConfAddMethodFetch = function (conf) {
     return conf
 }
 
-util.collatorSort = (elems, key, lang) => {
+/**
+ * Sort elements alphabetically by a given attribute.
+ * @param {object[]} elems A list of objects.
+ * @param {string | number} key A key that should be present in the objects.
+ * @param {string} [lang] The code of the language to translate to. Defaults to the global current language.
+ * @returns A copy of the list, sorted.
+ */
+export function collatorSort(elems, key, lang) {
     const comparator = new Intl.Collator(lang).compare
-    return elems.slice().sort((a, b) => {
-        return comparator(...[a, b].map((x) => util.translateAttribute(lang, x, key)))
-    })
+    return elems.slice().sort((a, b) => comparator(...[a, b].map((x) => locObj(x[key], lang))))
 }

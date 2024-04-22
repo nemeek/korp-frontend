@@ -1,6 +1,12 @@
 /** @format */
+import angular from "angular"
 import _ from "lodash"
+import settings from "@/settings"
+import model from "@/model"
+import { expandOperators } from "@/cqp_parser/cqp"
+import { formatRelativeHits, hitCountHtml, html, loc } from "@/util"
 import * as trendUtil from "../trend_diagram/trend_util"
+import "@/components/korp-error"
 
 const granularities = {
     year: "y",
@@ -22,8 +28,7 @@ const zoomLevelToFormat = {
 
 const validZoomLevels = Object.keys(granularities)
 
-let html = String.raw
-export const trendDiagramComponent = {
+angular.module("korpApp").component("trendDiagram", {
     template: html`
         <korp-error ng-show="$ctrl.error"></korp-error>
         <div class="graph_tab" ng-show="!$ctrl.error">
@@ -118,7 +123,7 @@ export const trendDiagramComponent = {
                         end: 24,
                         corpus: $ctrl.data.corpusListing.stringifySelected(),
                         cqp: $ctrl.data.cqp,
-                        cqp2: CQP.expandOperators(decodedCQP),
+                        cqp2: expandOperators(decodedCQP),
                         cqp3: timecqp,
                         expand_prequeries: false,
                     },
@@ -336,7 +341,7 @@ export const trendDiagramComponent = {
                     const selType = $(".timeKindOfFormat option:selected", $ctrl.$result).val()
                     const dataDelimiter = selType === "TSV" ? "\t" : ";"
 
-                    const header = [util.getLocaleString("stats_hit")]
+                    const header = [loc("stats_hit")]
 
                     for (let cell of series[0].data) {
                         const stampformat = zoomLevelToFormat[cell.zoom]
@@ -389,30 +394,14 @@ export const trendDiagramComponent = {
                             name: timestamp,
                             field: timestamp,
                             formatter(row, cell, value, columnDef, dataContext) {
-                                const loc = {
-                                    swe: "sv-SE",
-                                    eng: "gb-EN",
-                                }[$("body").scope().lang]
-                                const fmt = function (valTup) {
-                                    if (typeof valTup[0] === "undefined") {
-                                        return ""
-                                    }
-                                    return (
-                                        "<span>" +
-                                        "<span class='relStat'>" +
-                                        Number(valTup[1].toFixed(1)).toLocaleString(loc) +
-                                        "</span> " +
-                                        "<span class='absStat'>(" +
-                                        valTup[0].toLocaleString(loc) +
-                                        ")</span> " +
-                                        "<span>"
-                                    )
-                                }
-                                return fmt(value)
+                                return typeof value[0] === "undefined"
+                                    ? ""
+                                    : hitCountHtml(value[0], value[1], $rootScope.lang)
                             },
                         }
                         const i = _.sortedIndexOf(_.map(row.abs_data, "x"), item.x)
-                        new_time_row[timestamp] = [item.y, row.abs_data[i].y]
+                        // [absolute, relative], like in statistics_worker.ts
+                        new_time_row[timestamp] = [row.abs_data[i].y, item.y]
                     }
                     time_table_data.push(new_time_row)
                 }
@@ -655,13 +644,8 @@ export const trendDiagramComponent = {
                     },
 
                     yFormatter(y) {
-                        const val = util.formatDecimalString(y.toFixed(2), false, true, true)
-
-                        return (
-                            `<br><span rel='localize[rel_hits_short]'>${util.getLocaleString(
-                                "rel_hits_short"
-                            )}</span> ` + val
-                        )
+                        const val = formatRelativeHits(y, $rootScope.lang)
+                        return `<br><span rel='localize[rel_hits_short]'>${loc("rel_hits_short")}</span> ` + val
                     },
                     formatter(series, x, y, formattedX, formattedY, d) {
                         let abs_y
@@ -676,7 +660,7 @@ export const trendDiagramComponent = {
                         return `<span data-cqp="${encodeURIComponent(series.cqp)}">
                                 ${rel}
                                 <br>
-                                ${util.getLocaleString("abs_hits_short")}: ${abs_y}
+                                ${loc("abs_hits_short")}: ${abs_y.toLocaleString($rootScope.lang)}
                             </span>`
                     },
                 })
@@ -784,4 +768,4 @@ export const trendDiagramComponent = {
             }
         },
     ],
-}
+})

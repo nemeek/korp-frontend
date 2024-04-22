@@ -1,10 +1,6 @@
 /** @format */
-import settings from "korp_config"
-
-window.settings = settings
-settings.markup = {
-    msd: require("./markup/msd.html"),
-}
+import currentMode from "@/mode"
+import { angularLocationSearch } from "@/util"
 
 let $ = require("jquery")
 window.jQuery = $
@@ -29,33 +25,17 @@ require("./styles/textreader.css")
 require("components-jqueryui/ui/widget.js")
 
 require("angular")
-require("angular-ui-bootstrap/src/typeahead")
-require("angular-ui-bootstrap/src/tooltip")
-require("angular-ui-bootstrap/src/modal")
-require("angular-ui-bootstrap/src/tabs")
-require("angular-ui-bootstrap/src/dropdown")
-require("angular-ui-bootstrap/src/pagination")
-require("angular-ui-bootstrap/src/datepicker")
-require("angular-ui-bootstrap/src/timepicker")
-require("angular-ui-bootstrap/src/buttons")
-require("angular-ui-bootstrap/src/popover")
-
-require("angular-spinner")
 
 require("jquerylocalize")
-require("./lib/jquery.format.js")
 
 window.c = console
-window.currentMode = new URLSearchParams(window.location.search).get("mode") || "default"
 
 try {
     // modes-files are optional and have customizing code
     require(`modes/${currentMode}_mode.js`)
 } catch (error) {
-    console.log("No mode file available for mode:", currentMode)
+    if (error.code != "MODULE_NOT_FOUND") console.error("Error importing mode file:", error)
 }
-
-require("angular-dynamic-locale/dist/tmhDynamicLocale.js")
 
 require("slickgrid/lib/jquery.event.drag-2.3.0")
 require("slickgrid/slick.core")
@@ -72,18 +52,11 @@ window.CSV = require("comma-separated-values/csv")
 require("leaflet")
 require("leaflet.markercluster")
 require("leaflet-providers")
-require("geokorp/dist/scripts/geokorp")
-require("geokorp/dist/scripts/geokorp-templates")
 require("angular-filter/index.js")
 
 require("./lib/jquery.tooltip.pack.js")
 
-require("./scripts/statistics.js")
-require("./scripts/cqp_parser/CQPParser.js")
-require("./scripts/cqp_parser/cqp.js")
-require("./scripts/util.js")
 require("./scripts/pie-widget.js")
-require("./scripts/model.js")
 require("./scripts/widgets.js")
 require("./scripts/main.js")
 require("./scripts/app.js")
@@ -108,3 +81,7 @@ require("./scripts/directives.js")
 require("./scripts/directives/scroll.js")
 require("./scripts/filter_directives.js")
 require("./scripts/matomo.js")
+
+// TODO Remove, currently used in tests
+/** @deprecated */
+window.locationSearch = angularLocationSearch

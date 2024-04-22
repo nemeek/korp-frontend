@@ -1,9 +1,13 @@
 /** @format */
+import angular from "angular"
 import _ from "lodash"
 import statemachine from "@/statemachine"
+import settings from "@/settings"
+import { expandOperators, mergeCqpExprs, parse, stringify, supportsInOrder } from "@/cqp_parser/cqp"
+import { html } from "@/util"
+import "@/components/extended/tokens"
 
-let html = String.raw
-export const extendedStandardComponent = {
+angular.module("korpApp").component("extendedStandard", {
     template: html`
         <div>
             <global-filters lang="$ctrl.lang"></global-filters>
@@ -54,6 +58,7 @@ export const extendedStandardComponent = {
 
             // TODO this is *too* weird
             function triggerSearch() {
+                // Unset and set query in next time step in order to trigger changes correctly in `searches`.
                 $location.search("search", null)
                 $location.search("page", null)
                 $location.search("in_order", $scope.freeOrder ? false : null)
@@ -106,10 +111,10 @@ export const extendedStandardComponent = {
             /** Trigger error if the "free order" option is incompatible with the query */
             ctrl.validateFreeOrder = () => {
                 try {
-                    const cqpObjs = CQP.parse(ctrl.cqp || "[]")
+                    const cqpObjs = parse(ctrl.cqp || "[]")
                     // If query doesn't support free word order, and the "free order" checkbox is checked,
                     // then show explanation and let user resolve the conflict
-                    ctrl.orderError = !CQP.supportsInOrder(cqpObjs) && $scope.freeOrder
+                    ctrl.orderError = !supportsInOrder(cqpObjs) && $scope.freeOrder
                 } catch (e) {
                     console.error("Failed to parse CQP", ctrl.cqp)
                     ctrl.orderError = false
@@ -124,9 +129,9 @@ export const extendedStandardComponent = {
             }
 
             const updateExtendedCQP = function () {
-                let val2 = CQP.expandOperators(ctrl.cqp)
+                let val2 = expandOperators(ctrl.cqp)
                 if ($rootScope.globalFilter) {
-                    val2 = CQP.stringify(CQP.mergeCqpExprs(CQP.parse(val2 || "[]"), $rootScope.globalFilter))
+                    val2 = stringify(mergeCqpExprs(parse(val2 || "[]"), $rootScope.globalFilter))
                 }
                 $rootScope.extendedCQP = val2
             }
@@ -151,4 +156,4 @@ export const extendedStandardComponent = {
             })
         },
     ],
-}
+})

@@ -1,13 +1,17 @@
 /** @format */
+import angular from "angular"
 import _ from "lodash"
 import korpLogo from "../../img/korp_slogan.svg"
 import korpLogoEn from "../../img/korp_slogan_en.svg"
 import sbxLogo from "../../img/sprakbanken_text_slogan.svg"
 import sbxLogoEn from "../../img/sprakbanken_text_slogan_en.svg"
 import guLogo from "../../img/gu_logo_sv_head.svg"
+import settings from "@/settings"
+import currentMode from "@/mode"
+import { collatorSort, html } from "@/util"
+import "@/components/corpus_chooser/corpus-chooser"
 
-let html = String.raw
-export const headerComponent = {
+angular.module("korpApp").component("header", {
     template: html`
         <div id="header">
             <div class="flex items-center justify-between px-3 py-2" id="top_bar">
@@ -219,7 +223,7 @@ export const headerComponent = {
             $ctrl.visible = $ctrl.modes.slice(0, N_VISIBLE)
 
             $rootScope.$watch("lang", () => {
-                $ctrl.menu = util.collatorSort($ctrl.modes.slice(N_VISIBLE), "label", $rootScope.lang)
+                $ctrl.menu = collatorSort($ctrl.modes.slice(N_VISIBLE), "label", $rootScope.lang)
 
                 const i = _.map($ctrl.menu, "mode").indexOf(currentMode)
                 if (i !== -1) {
@@ -241,10 +245,10 @@ export const headerComponent = {
             for (let mode of $ctrl.modes) {
                 mode.selected = false
                 if (mode.mode === currentMode) {
-                    window.settings.mode = mode
+                    settings.mode = mode
                     mode.selected = true
                 }
             }
         },
     ],
-}
+})

@@ -1,6 +1,9 @@
 /** @format */
-let html = String.raw
-export const extendedStructTokenComponent = {
+import angular from "angular"
+import settings from "@/settings"
+import { html } from "@/util"
+
+angular.module("korpApp").component("extendedStructToken", {
     template: html`
         <div class="query_token mt-8">
             <div class="token_header">
@@ -75,4 +78,4 @@ export const extendedStructTokenComponent = {
             }
         },
     ],
-}
+})

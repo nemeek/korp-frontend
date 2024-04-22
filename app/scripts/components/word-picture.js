@@ -1,6 +1,9 @@
 /** @format */
-let html = String.raw
-export const wordPictureComponent = {
+import angular from "angular"
+import settings from "@/settings"
+import { html, isLemgram, loc, splitLemgram } from "@/util"
+
+angular.module("korpApp").component("wordPicture", {
     template: html`
         <div class="wordpic_disabled" ng-if="!$ctrl.wordPic">
             {{'word_pic_warn' | loc:$root.lang}}
@@ -98,15 +101,9 @@ export const wordPictureComponent = {
 
             $ctrl.localeString = function (lang, hitSetting) {
                 if (hitSetting === "1000") {
-                    return util.getLocaleString("word_pic_show_all", lang)
+                    return loc("word_pic_show_all", lang)
                 } else {
-                    return (
-                        util.getLocaleString("word_pic_show_some", lang) +
-                        " " +
-                        hitSetting +
-                        " " +
-                        util.getLocaleString("word_pic_hits", lang)
-                    )
+                    return loc("word_pic_show_some", lang) + " " + hitSetting + " " + loc("word_pic_hits", lang)
                 }
             }
 
@@ -127,20 +124,18 @@ export const wordPictureComponent = {
                     return `lemgram_header_item ${header.css_class}`
                 } else {
                     let classes = "hit"
-                    if ($ctrl.isLemgram(token)) {
+                    if (isLemgram(token)) {
                         classes += " lemgram"
                     }
                     return classes
                 }
             }
 
-            $ctrl.isLemgram = (word) => {
-                util.isLemgramId(word)
-            }
+            $ctrl.isLemgram = isLemgram
 
             $ctrl.fromLemgram = function (maybeLemgram) {
-                if (util.isLemgramId(maybeLemgram)) {
-                    return util.splitLemgram(maybeLemgram).form
+                if (isLemgram(maybeLemgram)) {
+                    return splitLemgram(maybeLemgram).form
                 } else {
                     return maybeLemgram
                 }
@@ -166,8 +161,8 @@ export const wordPictureComponent = {
 
                 const prefix = row.depextra
 
-                if (util.isLemgramId(lemgram)) {
-                    const match = util.splitLemgram(lemgram)
+                if (isLemgram(lemgram)) {
+                    const match = splitLemgram(lemgram)
                     infixIndex = match.index
                     if (row.dep) {
                         concept = match.form.replace(/_/g, " ")
@@ -200,4 +195,4 @@ export const wordPictureComponent = {
             }
         },
     ],
-}
+})

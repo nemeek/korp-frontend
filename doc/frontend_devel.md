@@ -103,9 +103,14 @@ settings that affect the frontend.
 
 **Others:**
 
+- __auth_module__ - String or object. See [Authentication](#authentication)
 - __autocomplete__ - Boolean. See [auto completion menu](#auto-completion-menu)
 - __corpus_config_url__ - String. Configuration for the selected mode is fetched from here at app initialization. If not given, the default is `<korp_backend_url>/corpus_config?mode=<mode>`, see the [`corpus_config`](https://ws.spraakbanken.gu.se/docs/korp#tag/Information/paths/~1corpus_config/get) API.
+- __corpus_info_link__ - Object. Use this to render a link for each corpus in the corpus chooser.
+  - __url_template__ - String or translation object. A URL containing a token "%s", which will be replaced with the corpus id.
+  - __label__ - String or translation object. The label is the the same for all corpora.
 - __default_language__ - String. The default interface language. Default: `"eng"`
+- __description__ - String. Any HTML content to show on frontpage until search is made.
 - __common_struct_types__ - Object with attribute name as a key and attribute definition as value. Attributes 
     that may be added automatically to a corpus. See [backend documentation](https://github.com/spraakbanken/korp-backend)
     for more information about how to define attributes.
@@ -122,6 +127,12 @@ settings that affect the frontend.
     In extended search, the default `within` will be used unless the user specifies something else. In that case the user's choice will be used for all corpora that support it and for corpora that do not support it, a supported `within` will be used.
 - __enable_backend_kwic_download__ - Boolean. Backend download, depends on backend download functionality.
 - __enable_frontend_kwic_download__ - Boolean. Frontend download. Gives CSV created by same data as available in the KWIC.
+- __frontpage__ - Object. Settings for what to show under the search form until a search is made.
+  - __corpus_updates__ - Boolean. Enables a listing of most recently updated corpora.
+  - __examples__ - List of objects. A random selection of three of these are shown on the frontpage as search links.
+    - __label__: String or translation object.
+    - __params__: Object. This is translated to URL search params when the link is clicked.
+    - __hint__: String or translation object. Can contain HTML.
 - __group_statistics__ - List of attribute names. Attributes that either have a rank or a numbering used for multi-word units. For example, removing `:2` from `ta_bort..vbm.1:2`, to get the lemgram of this word: `ta_bort..vbm.1`.
 - __has_timespan__ - Boolean. If the backend supports the `timespan` call, used in corpus chooser for example. Default: `true`
 - __hits_per_page_values__ - Array of integer. The available page sizes. Default: `[25, 50, 75, 100]`
@@ -218,7 +229,7 @@ https://<frontend url>/?mode=kubhist
 
 If no mode is given, mode is `default`.
 
-It then looks for mode-specific code in `<configDir>/modes/<mode>_mode.js`. Mode code may overwrite values from `config.yml` by altering `window.settings`.
+It then looks for mode-specific code in `<configDir>/modes/<mode>_mode.js`. Mode code may overwrite values from `config.yml` by altering the `settings` object imported from `@/settings`.
 
 It then looks for settings for this specific mode, the **corpus config**. If it exists at `<configDir>/modes/<mode>_corpus_config.json`, it will be loaded from there. Otherwise, it retrieves it from the url given by the `corpus_config_url` option, which defaults to:
 
@@ -465,7 +476,7 @@ Local storage is used to remember when the user last checked the news. If there 
 
 ## Authentication
 
-Korp comes with two implementations of login. Choose implementation using `auth_module` in `config.yml.
+Korp comes with two implementations of login. Choose implementation using `auth_module` in `config.yml`.
 
 Either just give your chosen implementation like this:
 
@@ -727,10 +738,12 @@ If you need to merge rows or otherwise alter the table structure, implement and 
 Add all custom pretty-printing to `custom/stringify.js`. Example file:
 
 ```
+import { lemgramToHtml, saldoToHtml } from "@/util"
+
 export const {
-    sense: (sense) => util.saldoToString(sense, true),
-    lemgram: (str) => util.lemgramToString(str, true),
-    complemgram: (str) => str.split('+').map((lemgram) => util.lemgramToString(lemgram, true)).join('+')
+    sense: (sense) => saldoToHtml(sense, true),
+    lemgram: (str) => lemgramToHtml(str, true),
+    complemgram: (str) => str.split('+').map((lemgram) => lemgramToHtml(lemgram, true)).join('+')
 }
 ```
 

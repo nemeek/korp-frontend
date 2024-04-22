@@ -1,5 +1,8 @@
 /** @format */
 import _ from "lodash"
+import settings from "@/settings"
+import { html, loc, regescape, locAttribute, unregescape } from "@/util"
+import "@/components/autoc"
 
 let customExtendedTemplates = {}
 
@@ -8,8 +11,6 @@ try {
 } catch (error) {
     console.log("No module for extended components available")
 }
-
-let html = String.raw
 
 const autocompleteTemplate = `\
 <div>
@@ -27,7 +28,7 @@ const selectTemplate =
     "<input ng-show='inputOnly' type='text' ng-model='input'/>"
 const localize = ($scope) =>
     function (str) {
-        return util.translateAttribute(null, $scope.translation, str)
+        return locAttribute($scope.translation, str)
     }
 
 const selectController = (autocomplete) => [
@@ -71,7 +72,7 @@ const selectController = (autocomplete) => [
 
                     const dataset = _.map(_.uniq(data), function (item) {
                         if (item === "") {
-                            return [item, util.getLocaleString("empty")]
+                            return [item, loc("empty")]
                         }
                         return [item, localizer(item)]
                     })

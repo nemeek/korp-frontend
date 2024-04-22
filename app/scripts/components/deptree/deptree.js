@@ -1,8 +1,9 @@
 /** @format */
+import angular from "angular"
 import _ from "lodash"
+import { html, locObj } from "@/util"
 
-let html = String.raw
-export const depTreeComponent = {
+angular.module("korpApp").component("depTree", {
     template: html`
         <div>
             <script type="text/ng-template" id="deptreeModal.html">
@@ -57,7 +58,7 @@ export const depTreeComponent = {
                                     draw_deptree($ctrl.tokens, function (msg) {
                                         const [type, val] = _.head(_.toPairs(msg))
                                         $scope.$apply((s) => {
-                                            s.label = util.getLocaleStringObject($ctrl.corpus.attributes[type].label)
+                                            s.label = locObj($ctrl.corpus.attributes[type].label)
                                             s.value = $ctrl.corpus.attributes[type].translation[val]
                                         })
                                     })
@@ -215,4 +216,4 @@ export const depTreeComponent = {
             }
         },
     ],
-}
+})

@@ -1,23 +1,14 @@
 /** @format */
 import _ from "lodash"
-import statisticsFormatting from "../config/statistics_config.js"
+import settings from "@/settings"
+import { reduceStringify } from "../config/statistics_config"
+import { hitCountHtml } from "@/util"
 const pieChartImg = require("../img/stats2.png")
 
 const createStatisticsService = function () {
     const createColumns = function (corpora, reduceVals, reduceValLabels) {
-        const loc = {
-            swe: "sv-SE",
-            eng: "gb-EN",
-        }[$("body").scope().lang]
-
         const valueFormatter = function (row, cell, value, columnDef, dataContext) {
-            const valTup = dataContext[columnDef.id + "_value"]
-            return (
-                `<span><span class='relStat'>${Number(valTup[1].toFixed(1)).toLocaleString(loc)}</span> ` +
-                "<span class='absStat'>(" +
-                valTup[0].toLocaleString(loc) +
-                ")</span></span>"
-            )
+            return hitCountHtml(...dataContext[columnDef.id + "_value"], window.lang)
         }
 
         const corporaKeys = _.keys(corpora)
@@ -33,11 +24,7 @@ const createStatisticsService = function () {
                 sortable: true,
                 formatter(row, cell, value, columnDef, dataContext) {
                     if (dataContext["rowId"] !== 0) {
-                        const formattedValue = statisticsFormatting.reduceStringify(
-                            reduceVal,
-                            dataContext[reduceVal],
-                            attrObj[reduceVal]
-                        )
+                        const formattedValue = reduceStringify(reduceVal, dataContext[reduceVal], attrObj[reduceVal])
                         dataContext["formattedValue"][reduceVal] = formattedValue
                         return `<span class="statistics-link" data-row=${dataContext["rowId"]}>${formattedValue}</span>`
                     } else {
@@ -55,10 +42,7 @@ const createStatisticsService = function () {
             field: "hit_value",
             sortable: false,
             formatter(row, cell, value, columnDef, dataContext) {
-                return $.format(
-                    `<img id="circlediagrambutton__%s" src="${pieChartImg}" class="arcDiagramPicture"/>`,
-                    dataContext.rowId
-                )
+                return `<img id="circlediagrambutton__${dataContext.rowId}" src="${pieChartImg}" class="arcDiagramPicture"/>`
             },
             maxWidth: 25,
             minWidth: 25,
@@ -126,4 +110,4 @@ const createStatisticsService = function () {
     return { processData }
 }
 
-window.statisticsService = createStatisticsService()
+export const statisticsService = createStatisticsService()

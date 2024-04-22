@@ -4,6 +4,8 @@
  * @format
  */
 import _ from "lodash"
+import settings from "@/settings"
+import { regescape, locAttribute } from "@/util"
 
 const korpApp = angular.module("korpApp")
 
@@ -114,9 +116,7 @@ korpApp.directive("globalFilter", [
 
             scope.isSelectedList = (value) => scope.selected.includes(value)
 
-            scope.translateAttribute = (value) => {
-                return util.translateAttribute(scope.lang, scope.attrDef.settings.translation, value)
-            }
+            scope.translateAttribute = (value) => locAttribute(scope.attrDef.settings.translation, value, scope.lang)
         },
     }),
 ])
