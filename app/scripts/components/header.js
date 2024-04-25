@@ -2,6 +2,7 @@
 import _ from "lodash"
 import korpLogo from "../../img/korp_slogan.svg"
 import korpLogoEn from "../../img/korp_slogan_en.svg"
+import korpLogoEt from "../../img/korp_slogan_et.svg"
 import sbxLogo from "../../img/sprakbanken_text_slogan.svg"
 import sbxLogoEn from "../../img/sprakbanken_text_slogan_en.svg"
 import guLogo from "../../img/gu_logo_sv_head.svg"
@@ -105,7 +106,7 @@ export const headerComponent = {
             <div class="flex justify-between items-end gap-3 my-3 px-3" id="header_left">
                 <a class="shrink-0 relative ml-4 pl-0.5" ng-click="$ctrl.logoClick()">
                     <img ng-if="$root.lang == 'swe'" src="${korpLogo}" height="300" width="300" />
-                    <img ng-if="$root.lang != 'swe'" src="${korpLogoEn}" height="300" width="300" />
+                    <img ng-if="$root.lang != 'swe'" src="${korpLogoEt}" height="300" width="300" />
                 </a>
                 <div id="labs_logo">
                     <svg
