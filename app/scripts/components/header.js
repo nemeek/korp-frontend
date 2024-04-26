@@ -106,7 +106,9 @@ export const headerComponent = {
             <div class="flex justify-between items-end gap-3 my-3 px-3" id="header_left">
                 <a class="shrink-0 relative ml-4 pl-0.5" ng-click="$ctrl.logoClick()">
                     <img ng-if="$root.lang == 'swe'" src="${korpLogo}" height="300" width="300" />
-                    <img ng-if="$root.lang != 'swe'" src="${korpLogoEn}" height="300" width="300" />
+                    <img ng-if="$root.lang == 'eng'" src="${korpLogoEn}" height="300" width="300" />
+                    <img ng-if="$root.lang == 'est'" src="${korpLogoEt}" height="300" width="300" />
+                    <!-- <img ng-if="$root.lang != 'swe'" src="${korpLogoEn}" height="300" width="300" /> -->
                 </a>
                 <div id="labs_logo">
                     <svg
