@@ -1,4 +1,5 @@
 /** @format */
+import _ from "lodash"
 import { kwicPagerName, kwicPager } from "./components/pager"
 import { sidebarName, sidebarComponent } from "./components/sidebar"
 import * as autoc from "./components/autoc"
@@ -178,10 +179,9 @@ korpApp.run([
         s._settings = settings
         window.lang = s.lang = $location.search().lang || settings["default_language"]
 
-        s.isLab = window.isLab
-
         s.extendedCQP = null
 
+        /** This deferred is used to signal that the filter feature is ready. */
         s.globalFilterDef = $q.defer()
 
         s.locationSearch = function () {

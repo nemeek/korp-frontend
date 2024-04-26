@@ -1,4 +1,5 @@
 /** @format */
+import _ from "lodash"
 import statemachine from "@/statemachine"
 import * as treeUtil from "./util"
 
@@ -54,7 +55,7 @@ export const corpusChooserComponent = {
                     {{ $ctrl.selectedNumberOfSentences | prettyNumber }} {{'corpselector_sentences_long' | loc:$root.lang}}
                 </p>
             </div>
-            <cc-info-box ng-if="$ctrl.showInfoBox" class="sticky top-0 bg-gray-100" style="width: 480px; overflow: scroll;" object="$ctrl.infoNode"></cc-info>
+            <cc-info-box ng-if="$ctrl.showInfoBox" class="sticky top-0 bg-gray-100 overflow-auto" style="width: 480px;" object="$ctrl.infoNode"></cc-info>
         </div>
     </div>
     `,

@@ -1,4 +1,5 @@
 /** @format */
+import _ from "lodash"
 import statemachine from "@/statemachine"
 
 let html = String.raw
@@ -21,8 +22,13 @@ export const simpleSearchComponent = {
                         on-search-save="$ctrl.onSearchSave(name)"
                     ></search-submit>
                     <div class="opts">
-                        <input id="inOrderChk" type="checkbox" ng-model="$ctrl.inOrder" />
-                        <label for="inOrderChk"> {{'in_order_chk' | loc:$root.lang}}</label>
+                        <input
+                            id="freeOrderChk"
+                            type="checkbox"
+                            ng-model="$ctrl.freeOrder"
+                            ng-disabled="!$ctrl.freeOrderEnabled"
+                        />
+                        <label for="freeOrderChk"> {{'free_order_chk' | loc:$root.lang}}</label>
                         <span> {{'and' | loc:$root.lang}} </span>
                         <span> {{'and_include' | loc:$root.lang}} </span>
                         <input id="prefixChk" type="checkbox" ng-model="$ctrl.prefix" />
@@ -84,7 +90,10 @@ export const simpleSearchComponent = {
                 ctrl.onChange(event.value, false)
             })
 
-            ctrl.inOrder = $location.search().in_order == null
+            /** Whether tokens should be matched in arbitrary order. */
+            ctrl.freeOrder = $location.search().in_order != null
+            /** Whether the "free order" option is applicable. */
+            ctrl.freeOrderEnabled = false
             ctrl.prefix = $location.search().prefix != null
             ctrl.mid_comp = $location.search().mid_comp != null
             ctrl.suffix = $location.search().suffix != null
@@ -97,7 +106,7 @@ export const simpleSearchComponent = {
 
             // triggers watch on searches.activeSearch
             ctrl.updateSearch = function () {
-                $location.search("in_order", !ctrl.inOrder ? false : null)
+                $location.search("in_order", ctrl.freeOrder && ctrl.freeOrderEnabled ? false : null)
                 $location.search("prefix", ctrl.prefix ? true : null)
                 $location.search("mid_comp", ctrl.mid_comp ? true : null)
                 $location.search("suffix", ctrl.suffix ? true : null)
@@ -123,18 +132,21 @@ export const simpleSearchComponent = {
                     const wordArray = currentText.split(" ")
                     const tokenArray = _.map(wordArray, (token) => {
                         const orParts = []
-                        if (ctrl.prefix) {
-                            orParts.push(token + ".*")
-                        }
+
                         if (ctrl.mid_comp) {
                             orParts.push(`.*${token}.*`)
+                        } else {
+                            if (ctrl.prefix) {
+                                orParts.push(token + ".*")
+                            }
+                            if (ctrl.suffix) {
+                                orParts.push(".*" + token)
+                            }
+                            if (!ctrl.prefix && !ctrl.suffix) {
+                                orParts.push(regescape(token))
+                            }
                         }
-                        if (ctrl.suffix) {
-                            orParts.push(`.*${token}`)
-                        }
-                        if (!(ctrl.prefix || ctrl.suffix)) {
-                            orParts.push(regescape(token))
-                        }
+
                         const res = _.map(orParts, (orPart) => `word = "${orPart}"${suffix}`)
                         return `[${res.join(" | ")}]`
                     })
@@ -226,6 +238,7 @@ export const simpleSearchComponent = {
                         ctrl.lemgram = search.val
                     }
                     $rootScope.simpleCQP = CQP.expandOperators(ctrl.getCQP())
+                    ctrl.updateFreeOrderEnabled()
                     ctrl.doSearch()
                 }
             })
@@ -238,6 +251,13 @@ export const simpleSearchComponent = {
                     ctrl.lemgram = regescape(output)
                     ctrl.currentText = null
                 }
+
+                ctrl.updateFreeOrderEnabled()
+            }
+
+            ctrl.updateFreeOrderEnabled = () => {
+                const cqpObjs = CQP.parse(ctrl.getCQP() || "[]")
+                ctrl.freeOrderEnabled = CQP.supportsInOrder(cqpObjs)
             }
 
             ctrl.doSearch = function () {

@@ -1,8 +1,8 @@
 /** @format */
 const webpack = require("webpack")
 const path = require("path")
-const { CleanWebpackPlugin } = require("clean-webpack-plugin")
 const CopyWebpackPlugin = require("copy-webpack-plugin")
+const HtmlWebpackPlugin = require("html-webpack-plugin")
 
 function getKorpConfigDir() {
     fs = require("fs")
@@ -23,7 +23,6 @@ module.exports = {
     resolve: {
         alias: {
             jquery: path.resolve(__dirname, "node_modules/jquery/src/jquery"),
-            jreject: path.resolve(__dirname, "app/lib/jquery.reject"),
             jquerylocalize: path.resolve(__dirname, "app/lib/jquery.localize"),
             jqueryhoverintent: path.resolve(__dirname, "app/lib/jquery.hoverIntent"),
             korp_config: path.resolve(korpConfigDir, "config.yml"),
@@ -108,7 +107,11 @@ module.exports = {
         ],
     },
     plugins: [
-        new CleanWebpackPlugin(),
+        // Create index.html with a dynamic reference to index.(hash).js
+        new HtmlWebpackPlugin({
+            /** @see https://github.com/jantimon/html-webpack-plugin#writing-your-own-templates */
+            template: "app/index.html",
+        }),
         new webpack.ProvidePlugin({
             $: "jquery",
             jQuery: "jquery",
@@ -119,9 +122,6 @@ module.exports = {
         }),
         new CopyWebpackPlugin({
             patterns: [
-                {
-                    from: "app/index.html",
-                },
                 {
                     from: "app/img/raven_simple.svg",
                     to: "img",
@@ -162,8 +162,11 @@ module.exports = {
                 },
             ],
         }),
-        new webpack.DefinePlugin({
-            __IS_LAB__: process.env.NODE_ENV == "staging",
+        new webpack.EnvironmentPlugin({
+            // Values here are defaults, in case the named variable is undefined
+            // See https://webpack.js.org/plugins/environment-plugin/
+            // Using our own variable instead of NODE_ENV, since NODE_ENV should really only be "development" or "production"
+            ENVIRONMENT: "development", // Can be: "development", "staging" or "production"
         }),
     ],
     ignoreWarnings: [
@@ -171,12 +174,13 @@ module.exports = {
         (e) => e.message.includes("Can't resolve 'modes"),
     ],
     entry: {
-        bundle: "./app/index.js",
+        index: "./app/index.js",
         worker: "./app/scripts/statistics_worker.ts",
     },
     output: {
-        filename: "[name].js",
+        filename: "[name].[contenthash].js",
         path: path.resolve(__dirname, "dist"),
         globalObject: "this",
+        clean: true,
     },
 }

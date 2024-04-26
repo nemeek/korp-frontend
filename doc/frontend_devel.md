@@ -104,6 +104,7 @@ settings that affect the frontend.
 **Others:**
 
 - __autocomplete__ - Boolean. See [auto completion menu](#auto-completion-menu)
+- __corpus_config_url__ - String. Configuration for the selected mode is fetched from here at app initialization. If not given, the default is `<korp_backend_url>/corpus_config?mode=<mode>`, see the [`corpus_config`](https://ws.spraakbanken.gu.se/docs/korp#tag/Information/paths/~1corpus_config/get) API.
 - __default_language__ - String. The default interface language. Default: `"eng"`
 - __common_struct_types__ - Object with attribute name as a key and attribute definition as value. Attributes 
     that may be added automatically to a corpus. See [backend documentation](https://github.com/spraakbanken/korp-backend)
@@ -127,10 +128,22 @@ settings that affect the frontend.
 - __hits_per_page_default__ - Integer. The preselected page size. Default: `hits_per_page_values[0]`
 - __iso_languages__ - A map of two-letter ISO language codes to three-letter. Only used for fixing old links. Default: See `settings.js`
 - __map_center__ - See [Map](#map)
-- __map_enabled__ - Boolean. See [Map](#map) 
+- __map_enabled__ - Boolean. See [Map](#map)
+- __matomo__ - Object. Enable analytics with a [Matomo](https://matomo.org/) instance.
+  - __url__: String. The URL of the Matomo instance, including trailing slash.
+  - __site__: Integer. The site ID that Matomo has assigned for the Korp instance.
+  - It is also possible to override each value underneath keys corresponding to `ENVIRONMENT` values, e.g:
+      ```
+      matomo:
+        url: https://matomo.example.com/
+        site: 1
+        production:
+          site: 2
+      ```
 - __news_desk_url__ - See [News widget](#news-widget)
 - __visible_modes__ - Integer. The number of modes to show links to. If there are more modes than this value, the rest will be added to a drop-down. Default: `6`
 - __statistics_search_default__ - Boolean. Decides if "Show statistics" will be checked or not when loading Korp. Default: `true`
+- __stats_rewrite__: A function that takes the array `[data, columns, searchParams]`, modifies and returns it.
 - __word_label__ - Translation object. Translations for "word". Add if you need support for other languages. Default:
     ```
     swe: ord
@@ -203,13 +216,17 @@ When Korp is loaded, it looks for the `mode` query parameter:
 https://<frontend url>/?mode=kubhist
 ```
 
-If no mode is given, mode is `default`. It then asks the backend for settings for this specific mode:
+If no mode is given, mode is `default`.
+
+It then looks for mode-specific code in `<configDir>/modes/<mode>_mode.js`. Mode code may overwrite values from `config.yml` by altering `window.settings`.
+
+It then looks for settings for this specific mode, the **corpus config**. If it exists at `<configDir>/modes/<mode>_corpus_config.json`, it will be loaded from there. Otherwise, it retrieves it from the url given by the `corpus_config_url` option, which defaults to:
 
 ```
-https://<backend_url>/corpus_config?mode=kubhist
+https://<korp_backend_url>/corpus_config?mode=<mode>
 ```
 
-See backend documentation for more information.
+See the [`corpus_config`](https://ws.spraakbanken.gu.se/docs/korp#tag/Information/paths/~1corpus_config/get) API for more information.
 
 ## Parallel mode
 
@@ -523,8 +540,8 @@ parameters for attributes.
 - **sidebar_hide_label**: `boolean`. If `true`, do not show the localized attribute label and the colon following it in the
   sidebar, only the attribute value. This can be used, for example, if the `pattern` for the attribute includes the label but
   the label should be shown in the attribute lists of the extended search or statistics.
-- **stats_cqp**: See [Custom statistics functions](#custom-statistics-functions).  
-- **stats_stringify**: See [Custom statistics functions](#custom-statistics-functions).
+- **stats_cqp**: See [Rendering attribute values in the statistics view](#rendering-attribute-values-in-the-statistics-view).
+- **stats_stringify**: See [Rendering attribute values in the statistics view](#rendering-attribute-values-in-the-statistics-view).
 - **translation**: An object containing translations of possible values of the attribute, in this format:
     ```
     {
@@ -676,7 +693,7 @@ Data about the search, the current token and current attribute is stored in a nu
 
 *Note: The component not an actual Angular.js [component](https://docs.angularjs.org/guide/component). It will be added to the interface by manually creating a new scope and using `$controller` to instantiate the controller and `$compile` to instantiate the template.*
 
-#### Rendering attribute values in the statistics-view
+#### Rendering attribute values in the statistics view
 
 Define your own rules for rendering values and generating CQP-expressions for certain attributes.
 
@@ -702,6 +719,8 @@ export default {
 
 Rendering values and generating CQP can also be controlled by editing `app/config/statistics_config.js`, but 
 of course it is best to avoid editing the actual code if it is possible.
+
+If you need to merge rows or otherwise alter the table structure, implement and assign a function to the `stats_rewrite` setting.
 
 #### Stringify functions
 
@@ -761,6 +780,17 @@ https://github.com/spraakbanken/korp-geo
 
 [github-frontend]: https://github.com/spraakbanken/korp-frontend/
 [github-frontend-sb]: https://github.com/spraakbanken/korp-frontend-sb/
+
+### CQP Parser
+
+CQP queries are of course parsed in the backend to perform searching. But they are also parsed in the frontend, for programmatic manipulation etc. The frontend parser is written in [Peggy](https://peggyjs.org/) syntax: [CQPParser.peggy](../app/scripts/cqp_parser/CQPParser.peggy). It covers only some of the full CQP syntax supported by the backend, and it is quite expected to throw errors when parsing user-crafted queries.
+
+To rebuild JS code from the Peggy file, do:
+
+```sh
+cd app/scripts/cqp_parser
+npx peggy --format es -d _:lodash CQPParser.peggy
+```
 
 ## Contributing with pull requests on Github
 
