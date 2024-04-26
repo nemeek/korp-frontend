@@ -46,7 +46,7 @@ export const headerComponent = {
                         <li class="bg-white hover_bg-gray-200 p-1 transition duration-500">
                             <a
                                 class="block transiton duration-200 hover_text-blue-600"
-                                href="https://spraakbanken.gu.se/verktyg/korp/användarhandledning"
+                                href="abi"
                                 target="_blank"
                                 >{{'docs' | loc:lang}}</a
                             >
