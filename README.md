@@ -1,12 +1,12 @@
-This repo contains the frontend for [Korp](https://spraakbanken.gu.se/korp), 
-a tool using the IMS Open Corpus Workbench (CWB). Korp is a great
-tool for searching and visualising natural language corpus data. 
+This repo contains the frontend for [Korp](https://spraakbanken.gu.se/korp), Språkbanken's word research platform using the IMS Open Corpus Workbench (CWB).
+Korp is a great tool for searching and visualising natural language corpus data.
 
-Korp is mainly developed by [Språkbanken](https://spraakbanken.gu.se) at the 
+Korp is mainly developed by [Språkbanken](https://spraakbanken.gu.se) at the
 University of Gothenburg, Sweden. Contributions are also made from other
 organizations that use the software.
 
 Documentation:
+
 - [Frontend documentation](../master/doc/frontend_devel.md)
 - [Backend documentation](https://github.com/spraakbanken/korp-backend/)
 - Sparv - The pipeline used to tag and otherwise process raw Swedish-language corpus data is documented [here](https://spraakbanken.gu.se/sparv)
@@ -21,8 +21,6 @@ Install `yarn`: `https://yarnpkg.com`
 - install all dependencies: `yarn`
 - run development server: `yarn start`
 - build a dist-version: `yarn build`
-- run dist-version: `yarn start:dist`
-- run tests: `yarn test` or `yarn test:karma` or `yarn test:e2e` (tests currently depend on Språkbankens setup).
 
 Declare dependencies using `yarn add pkg`or `yarn add --dev pkg` for dev dependencies.
 
@@ -30,7 +28,7 @@ Declare dependencies using `yarn add pkg`or `yarn add --dev pkg` for dev depende
 
 # webpack
 
-We use *webpack* to build Korp and *webpack-dev-server* to run a local server. To include new code or resources, require
+We use _webpack_ to build Korp and _webpack-dev-server_ to run a local server. To include new code or resources, require
 or use import them where needed:
 
 ```
@@ -51,10 +49,10 @@ imgPath = require("img/image.png")
 myTemplate = `<img src='${imgPath}'>`
 ```
 
-Most dependencies are only specified in `app/index.js` and where needed
-added to the `window`-object.
+Some dependencies are only specified in `app/index.ts`.
 
 About the current loaders in `webpack.config.js`:
+
 - `pug` and `html` files: all `src`-attributes in `<img>` tags and all `href`s in `<link>` tags will be
   loaded by webpack and replaced in the markup. Uses file loader so that requiring a `pug`
   or `html` file will give the path to the file back.
@@ -66,7 +64,7 @@ In addition to this, some specific files will simply be copied as is, for exampl
 
 ## Configuration
 
-Use `config.yml` for settings needed in the frontend. In some cases, mode-files can be used. For example 
+Use `config.yml` for settings needed in the frontend. In some cases, mode-files can be used. For example
 it is possible to have different backends for modes.
 
 # Other instances
@@ -84,10 +82,14 @@ There are several instances of Korp, here are a list of some:
 When developing, the frontend is served at http://localhost:9111 by default.
 
 Host and port can be changed by the environment variables:
+
 - `KORP_HOST=<host>`
 - `KORP_PORT=<port>`
 
+Environment variables can be entered in the `.env` file, which is git-ignored.
+
 It is also possible to serve the frontend from HTTPS using the environment variables:
+
 - `KORP_HTTPS=true`
 - `KORP_KEY=<path_to_key>-key.pem`
 - `KORP_CERT=<path to cert>.pem`
@@ -101,8 +103,6 @@ mkcert -install
 
 Now use `korp.spraakbanken.gu.se` as the value for `KORP_HOST`. It must also be added
 to `/etc/hosts`.
-
-One way to set the environment variables automatically is to use [direnv](https://direnv.net/):
 
 # Branches, releases and versions
 

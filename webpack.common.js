@@ -1,30 +1,24 @@
-/** @format */
 const webpack = require("webpack")
 const path = require("path")
+const Dotenv = require("dotenv")
 const CopyWebpackPlugin = require("copy-webpack-plugin")
 const HtmlWebpackPlugin = require("html-webpack-plugin")
 
-function getKorpConfigDir() {
-    fs = require("fs")
-    let config = "app"
-    try {
-        json = fs.readFileSync("run_config.json", { encoding: "utf-8" })
-        config = JSON.parse(json).configDir || "app"
-        console.log('Using "' + config + '" as config directory.')
-    } catch (err) {
-        console.log('No run_config.json given, using "app" as config directory (default).')
-    }
-    return config
-}
+// Read .env into process.env
+Dotenv.config()
 
-const korpConfigDir = getKorpConfigDir()
+// Read config dir
+let korpConfigDir = "app"
+try {
+    korpConfigDir = require("./run_config.json").configDir
+    console.log(`Using "${korpConfigDir}" as config directory.`)
+} catch {}
 
 module.exports = {
     resolve: {
         extensions: [".ts", "..."],
         alias: {
             jquery: path.resolve(__dirname, "node_modules/jquery/src/jquery"),
-            jquerylocalize: path.resolve(__dirname, "app/lib/jquery.localize"),
             korp_config: path.resolve(korpConfigDir, "config.yml"),
             custom: path.resolve(korpConfigDir, "custom/"),
             modes: path.resolve(korpConfigDir, "modes/"),
@@ -104,6 +98,15 @@ module.exports = {
                 test: /\.ya?ml$/,
                 use: "yaml-loader",
             },
+            {
+                test: /\.peggy$/,
+                use: {
+                    loader: "@rocket.chat/peggy-loader",
+                    options: {
+                        format: "es",
+                    },
+                },
+            },
         ],
     },
     plugins: [
@@ -131,10 +134,6 @@ module.exports = {
                     to: "img",
                 },
                 {
-                    from: "app/img/json.png",
-                    to: "img",
-                },
-                {
                     from: korpConfigDir + "/modes/*mode.js",
                     to: "modes/[name][ext]",
                     noErrorOnMissing: true,
@@ -146,7 +145,7 @@ module.exports = {
                 },
                 {
                     from: "app/translations/angular-locale_*.js",
-                    to: "translations/[name][ext]",
+                    to: "translations/[name].[fullhash][ext]",
                 },
                 {
                     from: "app/markup/msdtags.html",
@@ -154,11 +153,18 @@ module.exports = {
                 },
                 {
                     from: "app/translations/locale-*.json",
-                    to: "translations/[name][ext]",
+                    to: "translations/[name].[fullhash][ext]",
                 },
                 {
                     from: korpConfigDir + "/translations/*",
-                    to: "translations/[name][ext]",
+                    to: "translations/[name].[fullhash][ext]",
+                },
+                {
+                    // Copy images in the configuration, adding a hash
+                    // to avoid over-caching if the image is changed
+                    from: korpConfigDir + "/img/*",
+                    to: "img/[name].[fullhash][ext]",
+                    noErrorOnMissing: true,
                 },
             ],
         }),
@@ -174,13 +180,24 @@ module.exports = {
         (e) => e.message.includes("Can't resolve 'modes"),
     ],
     entry: {
-        index: "./app/index.js",
-        worker: "./app/scripts/statistics_worker.ts",
+        index: "./app/index.ts",
+        worker: "./app/scripts/statistics/statistics_worker.ts",
     },
     output: {
         filename: "[name].[contenthash].js",
         path: path.resolve(__dirname, "dist"),
         globalObject: "this",
         clean: true,
+    },
+    optimization: {
+        splitChunks: {
+            cacheGroups: {
+                // Vendor modules change less often, so clients can cache this chunk between releases.
+                vendor: {
+                    test: /[\\/]node_modules[\\/]/,
+                    chunks: "all",
+                },
+            },
+        },
     },
 }

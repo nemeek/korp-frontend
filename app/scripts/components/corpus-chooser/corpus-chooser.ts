@@ -1,0 +1,244 @@
+import angular, { IController } from "angular"
+import { isEqual, omitBy, pickBy } from "lodash"
+import statemachine from "@/statemachine"
+import settings from "@/settings"
+import { auth } from "@/auth/auth"
+import { html } from "@/util"
+import { suffixedNumbers } from "@/i18n/util"
+import {
+    ChooserFolderRoot,
+    ChooserFolderSub,
+    filterCorporaOnCredentials,
+    getAllSelected,
+    initCorpusStructure,
+    recalcFolderStatus,
+    updateLimitedAccess,
+} from "@/corpora/corpus-chooser"
+import "@/components/corpus-chooser/corpus-time-graph"
+import "@/components/corpus-chooser/info-box"
+import "@/components/corpus-chooser/tree"
+import { CorpusTransformed } from "@/settings/config-transformed.types"
+import { LangString } from "@/i18n/types"
+import { getTimeData } from "@/backend/timedata"
+import { StoreService } from "@/services/store"
+
+type CorpusChooserController = IController & {
+    firstCorpus: LangString
+    /** Traverse corpora and determine if each is available to the user */
+    updateLimitedAccess: () => void
+    /** Updates selectCount, selectedNumberOfTokens and selectedNumberOfSentences */
+    updateSelectedCount: (ids: string[]) => void
+    showChooser: boolean
+    showTimeGraph: boolean
+    showInfoBox: boolean
+    selectedNumberOfTokens: number
+    selectedNumberOfSentences: number
+    infoNode?: ChooserFolderSub | CorpusTransformed
+    /** UI handler for opening selector */
+    onShowChooser: () => void
+    /** UI handler for collapsing selector */
+    closeChooser: () => void
+    root: ChooserFolderRoot
+    totalCount: number
+    totalNumberOfTokens: number
+    /** Handle the on-select event of the cc-tree component */
+    onSelect: () => void
+    /** Handle clicking "Select all" */
+    selectAll: () => void
+    /** Handle clicking "Select none" */
+    selectNone: () => void
+    /** Handle the on-select-only event of the cc-tree component */
+    selectOnly: (ids: string[]) => void
+}
+
+angular.module("korpApp").component("corpusChooser", {
+    template: html`
+        <div
+            class="absolute inset-0 bg-transparent z-50"
+            ng-click="$ctrl.closeChooser()"
+            ng-if="$ctrl.showChooser"
+        ></div>
+        <div class="scroll_checkboxes shrink-0 cursor-pointer">
+            <div
+                ng-click="$ctrl.onShowChooser()"
+                class="hp_topframe no-underline flex justify-between items-center border border-gray-400 transition-all duration-500 hover:bg-blue-50 rounded h-12"
+            >
+                <div>
+                    <span ng-if-start="$ctrl.selectCount != 1">{{ $ctrl.selectCount }}</span>
+                    <span>{{ 'corpselector_of' | loc:$root.lang }}</span>
+                    <span>{{ $ctrl.totalCount }}</span>
+                    <span ng-if-end>{{'corpselector_selectedmultiple' | loc:$root.lang }}</span>
+
+                    <span ng-if-start="$ctrl.selectCount == 1"
+                        >{{ $ctrl.firstCorpus | locObj:$root.lang | maxLength}}</span
+                    >
+                    <span ng-if-end>{{ 'corpselector_selectedone' | loc:$root.lang }}</span>
+
+                    <span class="text-gray-600">
+                        — {{ $ctrl.suffixedNumbers($ctrl.selectedNumberOfTokens, $root.lang) }} {{ 'corpselector_of' |
+                        loc:$root.lang }} {{ $ctrl.suffixedNumbers($ctrl.totalNumberOfTokens, $root.lang) }} {{
+                        'corpselector_tokens' | loc:$root.lang }}
+                    </span>
+                </div>
+                <div class="transition-colors duration-500">
+                    <i class="fa-solid fa-caret-up relative top-2"></i>
+                    <br />
+                    <i class="fa-solid fa-caret-down relative bottom-2"></i>
+                </div>
+            </div>
+            <div ng-if="$ctrl.showChooser" class="corpus-chooser flex bg-white">
+                <div class="popupchecks shrink-0 p-4 h-full">
+                    <div class="flex">
+                        <corpus-time-graph ng-if="$ctrl.showTimeGraph"></corpus-time-graph>
+                        <div class="p-2 flex flex-wrap gap-2 items-stretch">
+                            <button ng-click="$ctrl.selectAll()" class="btn btn-default btn-sm w-40 shrink">
+                                <span class="fa-solid fa-check"></span>
+                                <span>{{'corpselector_buttonselectall' | loc:$root.lang }}</span>
+                            </button>
+                            <button ng-click="$ctrl.selectNone()" class="btn btn-default btn-sm w-40 shrink">
+                                <span class="fa-solid fa-times"></span>
+                                <span>{{ 'corpselector_buttonselectnone' | loc:$root.lang }}</span>
+                            </button>
+                        </div>
+                    </div>
+                    <!-- this is the beginning of the recursive component -->
+                    <cc-tree
+                        node="$ctrl.root"
+                        on-select="$ctrl.onSelect()"
+                        on-select-only="$ctrl.selectOnly(corporaIds)"
+                        on-show-info="$ctrl.onShowInfo(node)"
+                    ></cc-tree>
+
+                    <p class="text-sm pb-4">
+                        {{ $ctrl.selectedNumberOfSentences | prettyNumber }} {{'corpselector_sentences_long' |
+                        loc:$root.lang}}
+                    </p>
+                </div>
+                <cc-info-box
+                    ng-if="$ctrl.showInfoBox"
+                    class="sticky top-0 bg-gray-100 overflow-auto"
+                    style="width: 480px;"
+                    object="$ctrl.infoNode"
+                ></cc-info-box>
+            </div>
+        </div>
+    `,
+    bindings: {},
+    controller: [
+        "store",
+        function (store: StoreService) {
+            const $ctrl = this as CorpusChooserController
+
+            $ctrl.showChooser = false
+
+            $ctrl.$onInit = () => {
+                // remove the corpora with hide=true (linked corpora)
+                const ccCorpora = omitBy(settings.corpora, "hide")
+                $ctrl.root = initCorpusStructure(ccCorpora)
+                $ctrl.totalCount = $ctrl.root.numberOfChildren
+                $ctrl.totalNumberOfTokens = $ctrl.root.tokens
+                $ctrl.updateLimitedAccess()
+            }
+
+            // Sync when corpus selection is modified elsewhere.
+            store.watch("corpus", () => updateSelection(store.corpus))
+
+            statemachine.listen("login", function () {
+                $ctrl.updateLimitedAccess()
+            })
+
+            statemachine.listen("logout", function () {
+                // Unselect restricted corpora
+                for (const corpus of Object.values(settings.corpora))
+                    corpus.selected = corpus.selected && !corpus.limited_access
+                // Select those, or if none remain, fall back to default selection
+                const remaining = Object.keys(pickBy(settings.corpora, (corpus) => corpus.selected))
+                const toSelect = remaining.length ? remaining : settings.preselected_corpora || []
+                // Apply selection
+                select(toSelect)
+                $ctrl.updateLimitedAccess()
+            })
+
+            // Load time data before showing time graph
+            getTimeData().then((data) => {
+                $ctrl.showTimeGraph = Boolean(data && data[0].length)
+            })
+
+            $ctrl.onShowChooser = () => {
+                $ctrl.showChooser = !$ctrl.showChooser
+            }
+
+            $ctrl.closeChooser = () => {
+                $ctrl.showChooser = false
+                $ctrl.showInfoBox = false
+                $ctrl.infoNode = undefined
+            }
+
+            $ctrl.updateSelectedCount = (selection) => {
+                $ctrl.selectCount = selection.length
+                $ctrl.selectedNumberOfTokens = 0
+                $ctrl.selectedNumberOfSentences = 0
+                for (const corpusId of selection) {
+                    const corpus = settings.corpora[corpusId]
+                    $ctrl.selectedNumberOfTokens += corpus.tokens!
+                    $ctrl.selectedNumberOfSentences += corpus.sentences!
+                }
+            }
+
+            $ctrl.suffixedNumbers = suffixedNumbers
+
+            $ctrl.onSelect = function () {
+                const currentCorpora = getAllSelected($ctrl.root)
+                select(currentCorpora)
+            }
+
+            $ctrl.selectAll = function () {
+                select(Object.values(settings.corpora).map((corpus) => corpus.id))
+            }
+
+            $ctrl.selectNone = function () {
+                select([])
+            }
+
+            $ctrl.selectOnly = function (corporaIds) {
+                select(corporaIds)
+            }
+
+            $ctrl.updateLimitedAccess = function () {
+                if ($ctrl.root) {
+                    updateLimitedAccess($ctrl.root, auth.getCredentials())
+                }
+            }
+
+            /** Handle selection change from GUI. */
+            function select(ids: string[]) {
+                const selected = updateSelection(ids)
+                // Store new selection if it has actually changed
+                if (!isEqual(selected, store.corpus)) {
+                    store.corpus = [...selected]
+                }
+            }
+
+            /** Update selected state, respecting authorization. */
+            function updateSelection(ids: string[]): string[] {
+                // This modifies corpus.selected
+                const selection = filterCorporaOnCredentials(ids, auth.getCredentials())
+
+                // This uses corpus.selected
+                recalcFolderStatus($ctrl.root)
+                $ctrl.updateSelectedCount(selection)
+                // used when there is only one corpus selected to show name
+                if (selection.length == 1) {
+                    $ctrl.firstCorpus = settings.corpora[selection[0]].title
+                }
+
+                return selection
+            }
+
+            $ctrl.onShowInfo = (node: ChooserFolderSub | CorpusTransformed) => {
+                $ctrl.showInfoBox = node.id != $ctrl.infoNode?.id
+                $ctrl.infoNode = $ctrl.showInfoBox ? node : undefined
+            }
+        },
+    ],
+})
